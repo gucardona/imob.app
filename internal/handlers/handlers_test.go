@@ -416,6 +416,51 @@ func TestRouter_PublicImoveis_FilterByFinalidade(t *testing.T) {
 	}
 }
 
+func TestRouter_PublicImovelDetail_BySlug(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+	cfg := config.Config{SessionSecret: "test-secret", UploadsDir: t.TempDir()}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+
+	ir := repo.NewImovelRepo(conn)
+	ctx := context.Background()
+
+	im := samplePublicImovel()
+	if _, err := ir.Create(ctx, im); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/imoveis/casa-com-vista-para-o-mar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), im.Titulo) {
+		t.Errorf("expected body to contain imovel titulo %q", im.Titulo)
+	}
+}
+
+func TestRouter_PublicImovelDetail_NotFound(t *testing.T) {
+	router := newTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/imoveis/slug-inexistente", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected status 404, got %d", rec.Code)
+	}
+}
+
 func uploadSampleFoto(t *testing.T, router http.Handler, cookies []*http.Cookie, imovelID int64) *httptest.ResponseRecorder {
 	t.Helper()
 
