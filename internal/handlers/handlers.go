@@ -36,6 +36,8 @@ func NewRouter(deps Deps) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /{$}", pub.home)
+	mux.HandleFunc("GET /imoveis", pub.list)
+	mux.HandleFunc("GET /imoveis/{slug}", pub.detail)
 	mux.HandleFunc("GET /healthz", handleHealth(deps.Conn))
 	mux.Handle("GET /static/", http.FileServerFS(assets.Static))
 	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadsDir))))
