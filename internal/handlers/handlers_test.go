@@ -63,7 +63,7 @@ func TestRouter_Healthz_ReturnsOK(t *testing.T) {
 	}
 }
 
-func TestRouter_Home_RendersWelcomePage(t *testing.T) {
+func TestRouter_Home_RendersPage(t *testing.T) {
 	router := newTestRouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -73,8 +73,8 @@ func TestRouter_Home_RendersWelcomePage(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Errorf("expected status 200, got %d", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "Bem-vindo") {
-		t.Errorf("expected body to contain %q, got: %s", "Bem-vindo", rec.Body.String())
+	if !strings.Contains(rec.Body.String(), "Imóveis") {
+		t.Errorf("expected body to contain nav link 'Imóveis', got: %s", rec.Body.String())
 	}
 }
 
@@ -305,6 +305,159 @@ func TestRouter_AdminFotos_UploadPrincipalAndRemoveFlow(t *testing.T) {
 	list, _ = fotos.ListByImovel(context.Background(), imovelID)
 	if len(list) != 0 {
 		t.Errorf("expected 0 fotos after removal, got %d", len(list))
+	}
+}
+
+func samplePublicImovel() repo.Imovel {
+	return repo.Imovel{
+		Titulo:       "Casa com Vista para o Mar",
+		Descricao:    "Linda casa.",
+		Tipo:         "casa",
+		Finalidade:   "venda",
+		Cidade:       "Florianópolis",
+		Bairro:       "Canasvieiras",
+		Endereco:     "Rua das Gaivotas, 100",
+		Preco:        850000,
+		AreaM2:       180,
+		Quartos:      3,
+		Banheiros:    2,
+		VagasGaragem: 2,
+		Status:       "disponivel",
+		Destaque:     false,
+	}
+}
+
+func TestRouter_PublicImoveis_ListsDisponivel(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+	cfg := config.Config{SessionSecret: "test-secret", UploadsDir: t.TempDir()}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+
+	ir := repo.NewImovelRepo(conn)
+	ctx := context.Background()
+
+	disponivel := samplePublicImovel()
+	if _, err := ir.Create(ctx, disponivel); err != nil {
+		t.Fatalf("Create disponivel returned error: %v", err)
+	}
+
+	vendido := samplePublicImovel()
+	vendido.Titulo = "Casa Vendida"
+	vendido.Status = "vendido"
+	if _, err := ir.Create(ctx, vendido); err != nil {
+		t.Fatalf("Create vendido returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/imoveis", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, disponivel.Titulo) {
+		t.Errorf("expected body to contain disponivel imovel %q", disponivel.Titulo)
+	}
+	if strings.Contains(body, "Casa Vendida") {
+		t.Errorf("expected body to not contain vendido imovel")
+	}
+}
+
+func TestRouter_PublicImoveis_FilterByFinalidade(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+	cfg := config.Config{SessionSecret: "test-secret", UploadsDir: t.TempDir()}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+
+	ir := repo.NewImovelRepo(conn)
+	ctx := context.Background()
+
+	venda := samplePublicImovel()
+	venda.Finalidade = "venda"
+	if _, err := ir.Create(ctx, venda); err != nil {
+		t.Fatalf("Create venda returned error: %v", err)
+	}
+
+	aluguel := samplePublicImovel()
+	aluguel.Titulo = "Casa para Alugar"
+	aluguel.Finalidade = "aluguel"
+	if _, err := ir.Create(ctx, aluguel); err != nil {
+		t.Fatalf("Create aluguel returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/imoveis?finalidade=venda", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, venda.Titulo) {
+		t.Errorf("expected body to contain venda imovel %q", venda.Titulo)
+	}
+	if strings.Contains(body, "Casa para Alugar") {
+		t.Errorf("expected body to not contain aluguel imovel when filtering by venda")
+	}
+}
+
+func TestRouter_PublicImovelDetail_BySlug(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+	cfg := config.Config{SessionSecret: "test-secret", UploadsDir: t.TempDir()}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+
+	ir := repo.NewImovelRepo(conn)
+	ctx := context.Background()
+
+	im := samplePublicImovel()
+	if _, err := ir.Create(ctx, im); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/imoveis/casa-com-vista-para-o-mar", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), im.Titulo) {
+		t.Errorf("expected body to contain imovel titulo %q", im.Titulo)
+	}
+}
+
+func TestRouter_PublicImovelDetail_NotFound(t *testing.T) {
+	router := newTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/imoveis/slug-inexistente", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected status 404, got %d", rec.Code)
 	}
 }
 

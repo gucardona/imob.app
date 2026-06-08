@@ -1,0 +1,79 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/gucardona/imob.app/internal/repo"
+)
+
+templ ImovelDetail(imovel repo.Imovel, fotos []repo.Foto, cfg repo.Configuracao, uploadsURL string) {
+	@PublicLayout(imovel.Titulo, cfg) {
+		<main class="mx-auto max-w-5xl px-4 py-8">
+			if len(fotos) > 0 {
+				<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-8">
+					for _, f := range fotos {
+						<a href={ templ.SafeURL(uploadsURL + "/" + f.CaminhoGrande) } target="_blank">
+							<img
+								src={ uploadsURL + "/" + f.CaminhoThumb }
+								alt={ imovel.Titulo }
+								class="w-full h-40 object-cover rounded"
+							/>
+						</a>
+					}
+				</div>
+			}
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+				<div class="md:col-span-2">
+					<p class="text-xs text-slate-500 uppercase tracking-wide mb-1">{ imovel.Tipo } — { imovel.Finalidade }</p>
+					<h1 class="text-3xl font-bold mb-2">{ imovel.Titulo }</h1>
+					<p class="text-slate-600 mb-4">{ imovel.Cidade }, { imovel.Bairro }</p>
+					if imovel.Descricao != "" {
+						<p class="text-slate-700 mb-6">{ imovel.Descricao }</p>
+					}
+					<table class="text-sm w-full border-collapse">
+						<tbody>
+							if imovel.AreaM2 > 0 {
+								<tr class="border-b border-slate-100">
+									<td class="py-2 text-slate-500 w-40">Área</td>
+									<td class="py-2 font-medium">{ fmt.Sprintf("%.0f m²", imovel.AreaM2) }</td>
+								</tr>
+							}
+							if imovel.Quartos > 0 {
+								<tr class="border-b border-slate-100">
+									<td class="py-2 text-slate-500">Quartos</td>
+									<td class="py-2 font-medium">{ fmt.Sprintf("%d", imovel.Quartos) }</td>
+								</tr>
+							}
+							if imovel.Banheiros > 0 {
+								<tr class="border-b border-slate-100">
+									<td class="py-2 text-slate-500">Banheiros</td>
+									<td class="py-2 font-medium">{ fmt.Sprintf("%d", imovel.Banheiros) }</td>
+								</tr>
+							}
+							if imovel.VagasGaragem > 0 {
+								<tr class="border-b border-slate-100">
+									<td class="py-2 text-slate-500">Vagas</td>
+									<td class="py-2 font-medium">{ fmt.Sprintf("%d", imovel.VagasGaragem) }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+				<div class="bg-slate-50 rounded-lg p-6 h-fit">
+					<p class="text-2xl font-bold text-primary mb-4">{ fmt.Sprintf("R$ %.0f", imovel.Preco) }</p>
+					if cfg.Whatsapp != "" {
+						<a
+							href={ templ.SafeURL("https://wa.me/" + cfg.Whatsapp) }
+							target="_blank"
+							class="block w-full bg-green-500 text-white text-center rounded px-4 py-3 font-medium hover:bg-green-600"
+						>
+							Contato via WhatsApp
+						</a>
+					}
+					if cfg.Telefone != "" {
+						<p class="text-center text-sm text-slate-600 mt-3">{ cfg.Telefone }</p>
+					}
+				</div>
+			</div>
+		</main>
+	}
+}

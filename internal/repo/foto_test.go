@@ -2,6 +2,7 @@ package repo_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/gucardona/imob.app/internal/repo"
@@ -116,5 +117,57 @@ func TestFotoRepo_Delete_RemovesFoto(t *testing.T) {
 	}
 	if len(list) != 0 {
 		t.Errorf("expected 0 fotos after delete, got %d", len(list))
+	}
+}
+
+func TestFotoRepo_GetPrincipal_ReturnsPrincipalFoto(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+	fotos := repo.NewFotoRepo(conn)
+
+	id, err := imoveis.Create(ctx, sampleImovel())
+	if err != nil {
+		t.Fatalf("Create imovel returned error: %v", err)
+	}
+
+	fotoID, err := fotos.Create(ctx, repo.Foto{
+		ImovelID:        id,
+		CaminhoOriginal: "1/foto-1-original.jpg",
+		CaminhoThumb:    "1/foto-1-thumb.jpg",
+		CaminhoGrande:   "1/foto-1-grande.jpg",
+		Principal:       true,
+		Ordem:           0,
+	})
+	if err != nil {
+		t.Fatalf("Create foto returned error: %v", err)
+	}
+
+	got, err := fotos.GetPrincipal(ctx, id)
+	if err != nil {
+		t.Fatalf("GetPrincipal returned error: %v", err)
+	}
+	if got.ID != fotoID {
+		t.Errorf("expected fotoID %d, got %d", fotoID, got.ID)
+	}
+	if got.CaminhoThumb != "1/foto-1-thumb.jpg" {
+		t.Errorf("expected thumb path, got %q", got.CaminhoThumb)
+	}
+}
+
+func TestFotoRepo_GetPrincipal_NotFoundWhenNoPrincipal(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+	fotos := repo.NewFotoRepo(conn)
+
+	id, err := imoveis.Create(ctx, sampleImovel())
+	if err != nil {
+		t.Fatalf("Create imovel returned error: %v", err)
+	}
+
+	_, err = fotos.GetPrincipal(ctx, id)
+	if !errors.Is(err, repo.ErrNotFound) {
+		t.Errorf("expected repo.ErrNotFound for imovel with no fotos, got %v", err)
 	}
 }

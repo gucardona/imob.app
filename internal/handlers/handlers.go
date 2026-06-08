@@ -9,7 +9,6 @@ import (
 	"github.com/gucardona/imob.app/internal/auth"
 	"github.com/gucardona/imob.app/internal/config"
 	"github.com/gucardona/imob.app/internal/repo"
-	"github.com/gucardona/imob.app/internal/templates"
 )
 
 const sessionTTL = 7 * 24 * time.Hour
@@ -25,6 +24,8 @@ func NewRouter(deps Deps) http.Handler {
 	admins := repo.NewAdminRepo(deps.Conn)
 	imoveis := repo.NewImovelRepo(deps.Conn)
 	fotos := repo.NewFotoRepo(deps.Conn)
+	cfgRepo := repo.NewConfiguracaoRepo(deps.Conn)
+	pub := newPublicHandlers("/uploads", imoveis, fotos, cfgRepo)
 
 	authHandlers := newAuthHandlers(sessions, admins)
 	imovelHandlers := newImovelHandlers(deps.Config.UploadsDir, imoveis, fotos)
@@ -34,7 +35,9 @@ func NewRouter(deps Deps) http.Handler {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /{$}", handleHome)
+	mux.HandleFunc("GET /{$}", pub.home)
+	mux.HandleFunc("GET /imoveis", pub.list)
+	mux.HandleFunc("GET /imoveis/{slug}", pub.detail)
 	mux.HandleFunc("GET /healthz", handleHealth(deps.Conn))
 	mux.Handle("GET /static/", http.FileServerFS(assets.Static))
 	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadsDir))))
@@ -56,11 +59,6 @@ func NewRouter(deps Deps) http.Handler {
 	mux.Handle("POST /admin/imoveis/{id}/fotos/{fotoID}/excluir", requireAuth(http.HandlerFunc(fotoHandlers.delete)))
 
 	return mux
-}
-
-func handleHome(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = templates.Home().Render(r.Context(), w)
 }
 
 func handleHealth(conn *sql.DB) http.HandlerFunc {

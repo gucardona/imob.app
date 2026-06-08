@@ -137,6 +137,66 @@ func scanImovel(row rowScanner) (Imovel, error) {
 	return imovel, err
 }
 
+// ImovelFilter restricts ListPublic results. Zero value = no filter.
+type ImovelFilter struct {
+	Tipo         string // "" = any
+	Finalidade   string // "" = any
+	Cidade       string // "" = any; partial LIKE match
+	OnlyDestaque bool   // if true, only destaque=1
+}
+
+func (r ImovelRepo) GetBySlug(ctx context.Context, slug string) (Imovel, error) {
+	row := r.conn.QueryRowContext(ctx, `
+		SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
+		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque
+		FROM imoveis WHERE slug = ?
+	`, slug)
+	imovel, err := scanImovel(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Imovel{}, ErrNotFound
+	}
+	return imovel, err
+}
+
+func (r ImovelRepo) ListPublic(ctx context.Context, f ImovelFilter) ([]Imovel, error) {
+	q := `SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
+	             preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque
+	      FROM imoveis WHERE status = 'disponivel'`
+	var args []any
+	if f.Tipo != "" {
+		q += ` AND tipo = ?`
+		args = append(args, f.Tipo)
+	}
+	if f.Finalidade != "" {
+		q += ` AND finalidade = ?`
+		args = append(args, f.Finalidade)
+	}
+	if f.Cidade != "" {
+		q += ` AND cidade LIKE ?`
+		args = append(args, "%"+f.Cidade+"%")
+	}
+	if f.OnlyDestaque {
+		q += ` AND destaque = 1`
+	}
+	q += ` ORDER BY criado_em DESC`
+
+	rows, err := r.conn.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []Imovel
+	for rows.Next() {
+		imovel, err := scanImovel(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, imovel)
+	}
+	return list, rows.Err()
+}
+
 var accentReplacer = strings.NewReplacer(
 	"á", "a", "à", "a", "ã", "a", "â", "a", "ä", "a",
 	"é", "e", "è", "e", "ê", "e", "ë", "e",

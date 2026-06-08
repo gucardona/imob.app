@@ -1,10 +1,26 @@
 package templates
 
-templ Home() {
-	@Layout("Início") {
+import "github.com/gucardona/imob.app/internal/repo"
+
+templ Home(destaques []repo.Imovel, thumbURLs map[int64]string, cfg repo.Configuracao) {
+	@PublicLayout("Início", cfg) {
 		<main class="mx-auto max-w-5xl px-4 py-12">
-			<h1 class="text-3xl font-bold text-primary">Bem-vindo</h1>
-			<p class="mt-4 text-slate-600">Em breve, os imóveis disponíveis aparecerão aqui.</p>
+			if cfg.TextoHome != "" {
+				<p class="text-lg text-slate-700 mb-10">{ cfg.TextoHome }</p>
+			}
+			if len(destaques) > 0 {
+				<h2 class="text-2xl font-bold mb-6">Imóveis em Destaque</h2>
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+					for _, im := range destaques {
+						@ImovelCard(im, thumbURLs[im.ID])
+					}
+				</div>
+			} else {
+				<p class="text-slate-600">
+					Nenhum imóvel em destaque.
+					<a href="/imoveis" class="text-primary underline">Ver todos os imóveis</a>.
+				</p>
+			}
 		</main>
 	}
 }

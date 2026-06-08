@@ -1,0 +1,46 @@
+package templates
+
+import "github.com/gucardona/imob.app/internal/repo"
+
+templ ImovelList(imoveis []repo.Imovel, thumbURLs map[int64]string, filter repo.ImovelFilter, cfg repo.Configuracao) {
+	@PublicLayout("Imóveis", cfg) {
+		<main class="mx-auto max-w-5xl px-4 py-8">
+			<h1 class="text-2xl font-bold mb-6">Imóveis</h1>
+			<form method="GET" action="/imoveis" class="flex flex-wrap gap-3 mb-8">
+				<select name="finalidade" class="border border-slate-300 rounded px-3 py-2 text-sm">
+					<option value="">Finalidade</option>
+					<option value="venda" selected?={ filter.Finalidade == "venda" }>Venda</option>
+					<option value="aluguel" selected?={ filter.Finalidade == "aluguel" }>Aluguel</option>
+				</select>
+				<select name="tipo" class="border border-slate-300 rounded px-3 py-2 text-sm">
+					<option value="">Tipo</option>
+					<option value="casa" selected?={ filter.Tipo == "casa" }>Casa</option>
+					<option value="apartamento" selected?={ filter.Tipo == "apartamento" }>Apartamento</option>
+					<option value="terreno" selected?={ filter.Tipo == "terreno" }>Terreno</option>
+					<option value="comercial" selected?={ filter.Tipo == "comercial" }>Comercial</option>
+					<option value="rural" selected?={ filter.Tipo == "rural" }>Rural</option>
+				</select>
+				<input
+					type="text"
+					name="cidade"
+					value={ filter.Cidade }
+					placeholder="Cidade"
+					class="border border-slate-300 rounded px-3 py-2 text-sm"
+				/>
+				<button type="submit" class="bg-primary text-white rounded px-4 py-2 text-sm">Filtrar</button>
+				if filter.Tipo != "" || filter.Finalidade != "" || filter.Cidade != "" {
+					<a href="/imoveis" class="text-sm text-slate-500 underline self-center">Limpar filtros</a>
+				}
+			</form>
+			if len(imoveis) == 0 {
+				<p class="text-slate-600">Nenhum imóvel encontrado.</p>
+			} else {
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+					for _, im := range imoveis {
+						@ImovelCard(im, thumbURLs[im.ID])
+					}
+				</div>
+			}
+		</main>
+	}
+}
