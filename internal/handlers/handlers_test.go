@@ -63,7 +63,7 @@ func TestRouter_Healthz_ReturnsOK(t *testing.T) {
 	}
 }
 
-func TestRouter_Home_RendersWelcomePage(t *testing.T) {
+func TestRouter_Home_RendersPage(t *testing.T) {
 	router := newTestRouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -73,8 +73,8 @@ func TestRouter_Home_RendersWelcomePage(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Errorf("expected status 200, got %d", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "Bem-vindo") {
-		t.Errorf("expected body to contain %q, got: %s", "Bem-vindo", rec.Body.String())
+	if !strings.Contains(rec.Body.String(), "Imóveis") {
+		t.Errorf("expected body to contain nav link 'Imóveis', got: %s", rec.Body.String())
 	}
 }
 
