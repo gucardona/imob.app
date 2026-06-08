@@ -1,0 +1,8 @@
+/imob-app
+/imob.db
+/imob.db-journal
+/imob.db-shm
+/imob.db-wal
+/tailwindcss
+/internal/assets/static/css/output.css
+/internal/templates/*_templ.go
