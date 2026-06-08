@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gucardona/imob.app/internal/config"
 	"github.com/gucardona/imob.app/internal/db"
 	"github.com/gucardona/imob.app/internal/handlers"
 )
@@ -14,8 +15,8 @@ import (
 func newTestRouter(t *testing.T) http.Handler {
 	t.Helper()
 
-	path := filepath.Join(t.TempDir(), "test.db")
-	conn, err := db.Open(path)
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
 	if err != nil {
 		t.Fatalf("Open returned error: %v", err)
 	}
@@ -25,7 +26,12 @@ func newTestRouter(t *testing.T) http.Handler {
 		t.Fatalf("Migrate returned error: %v", err)
 	}
 
-	return handlers.NewRouter(conn)
+	cfg := config.Config{
+		SessionSecret: "test-secret-do-not-use-in-prod",
+		UploadsDir:    t.TempDir(),
+	}
+
+	return handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
 }
 
 func TestRouter_Healthz_ReturnsOK(t *testing.T) {
