@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/gucardona/imob.app/internal/repo"
@@ -15,9 +16,9 @@ type publicHandlers struct {
 	configuracao repo.ConfiguracaoRepo
 }
 
-func newPublicHandlers(uploadsDir string, imoveis repo.ImovelRepo, fotos repo.FotoRepo, cfg repo.ConfiguracaoRepo) publicHandlers {
+func newPublicHandlers(uploadsURL string, imoveis repo.ImovelRepo, fotos repo.FotoRepo, cfg repo.ConfiguracaoRepo) publicHandlers {
 	return publicHandlers{
-		uploadsURL:   "/uploads",
+		uploadsURL:   uploadsURL,
 		imoveis:      imoveis,
 		fotos:        fotos,
 		configuracao: cfg,
@@ -28,7 +29,7 @@ func (h publicHandlers) home(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	cfg, err := h.configuracao.Get(ctx)
-	if err != nil {
+	if err != nil && !errors.Is(err, repo.ErrNotFound) {
 		http.Error(w, "erro interno", http.StatusInternalServerError)
 		return
 	}

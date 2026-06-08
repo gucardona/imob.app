@@ -19,7 +19,7 @@ func (h publicHandlers) list(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cfg, err := h.configuracao.Get(ctx)
-	if err != nil {
+	if err != nil && !errors.Is(err, repo.ErrNotFound) {
 		http.Error(w, "erro interno", http.StatusInternalServerError)
 		return
 	}
@@ -51,7 +51,7 @@ func (h publicHandlers) detail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cfg, err := h.configuracao.Get(ctx)
-	if err != nil {
+	if err != nil && !errors.Is(err, repo.ErrNotFound) {
 		http.Error(w, "erro interno", http.StatusInternalServerError)
 		return
 	}

@@ -25,7 +25,7 @@ func NewRouter(deps Deps) http.Handler {
 	imoveis := repo.NewImovelRepo(deps.Conn)
 	fotos := repo.NewFotoRepo(deps.Conn)
 	cfgRepo := repo.NewConfiguracaoRepo(deps.Conn)
-	pub := newPublicHandlers(deps.Config.UploadsDir, imoveis, fotos, cfgRepo)
+	pub := newPublicHandlers("/uploads", imoveis, fotos, cfgRepo)
 
 	authHandlers := newAuthHandlers(sessions, admins)
 	imovelHandlers := newImovelHandlers(deps.Config.UploadsDir, imoveis, fotos)
