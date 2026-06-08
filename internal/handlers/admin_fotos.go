@@ -76,9 +76,9 @@ func (h fotoHandlers) upload(w http.ResponseWriter, r *http.Request) {
 		relDir := strconv.FormatInt(imovelID, 10)
 		_, err = h.fotos.Create(r.Context(), repo.Foto{
 			ImovelID:        imovelID,
-			CaminhoOriginal: filepath.ToSlash(filepath.Join(h.uploadsDir, relDir, paths.Original)),
-			CaminhoThumb:    filepath.ToSlash(filepath.Join(h.uploadsDir, relDir, paths.Thumb)),
-			CaminhoGrande:   filepath.ToSlash(filepath.Join(h.uploadsDir, relDir, paths.Grande)),
+			CaminhoOriginal: filepath.ToSlash(filepath.Join(relDir, paths.Original)),
+			CaminhoThumb:    filepath.ToSlash(filepath.Join(relDir, paths.Thumb)),
+			CaminhoGrande:   filepath.ToSlash(filepath.Join(relDir, paths.Grande)),
 			Ordem:           nextOrdem + i,
 		})
 		if err != nil {

@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -239,6 +240,31 @@ func TestRouter_AdminFotos_UploadPrincipalAndRemoveFlow(t *testing.T) {
 	}
 	if !strings.Contains(uploadRec.Body.String(), "fotos-grid") {
 		t.Errorf("expected fragment to contain the fotos grid, got: %s", uploadRec.Body.String())
+	}
+
+	imgSrcMatch := regexp.MustCompile(`<img src="([^"]+)"`).FindStringSubmatch(uploadRec.Body.String())
+	if len(imgSrcMatch) != 2 {
+		t.Fatalf("expected to find an <img src> in the fragment, got: %s", uploadRec.Body.String())
+	}
+	imgSrc := imgSrcMatch[1]
+	if !strings.HasPrefix(imgSrc, fmt.Sprintf("/uploads/%d/", imovelID)) {
+		t.Errorf("expected img src to be a servable /uploads/%d/... URL, got %q", imovelID, imgSrc)
+	}
+	if strings.Contains(imgSrc, uploadsDir) {
+		t.Errorf("expected img src %q to be decoupled from the configured uploadsDir %q, but it contains it", imgSrc, uploadsDir)
+	}
+
+	imgReq := httptest.NewRequest(http.MethodGet, imgSrc, nil)
+	for _, c := range cookies {
+		imgReq.AddCookie(c)
+	}
+	imgRec := httptest.NewRecorder()
+	router.ServeHTTP(imgRec, imgReq)
+	if imgRec.Code != http.StatusOK {
+		t.Fatalf("expected GET %s status %d, got %d", imgSrc, http.StatusOK, imgRec.Code)
+	}
+	if ct := imgRec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "image/") {
+		t.Errorf("expected GET %s Content-Type to start with image/, got %q", imgSrc, ct)
 	}
 
 	fotos := repo.NewFotoRepo(conn)
