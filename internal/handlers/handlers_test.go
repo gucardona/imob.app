@@ -63,3 +63,18 @@ func TestRouter_Home_RendersWelcomePage(t *testing.T) {
 		t.Errorf("expected body to contain %q, got: %s", "Bem-vindo", rec.Body.String())
 	}
 }
+
+func TestRouter_AdminImoveisList_RequiresAuth(t *testing.T) {
+	router := newTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/imoveis", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("expected redirect status %d, got %d", http.StatusSeeOther, rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/admin/login" {
+		t.Errorf("expected redirect to /admin/login, got %q", loc)
+	}
+}

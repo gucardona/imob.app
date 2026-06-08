@@ -1,0 +1,62 @@
+package templates
+
+import (
+	"fmt"
+
+	"github.com/gucardona/imob.app/internal/repo"
+)
+
+templ AdminImoveisList(imoveis []repo.Imovel) {
+	@AdminLayout("Imóveis") {
+		<div class="flex items-center justify-between">
+			<h1 class="text-2xl font-bold text-slate-900">Imóveis</h1>
+			<a href="/admin/imoveis/novo" class="rounded bg-primary px-4 py-2 text-sm font-medium text-white">Novo imóvel</a>
+		</div>
+		<table class="mt-6 w-full table-auto border-collapse overflow-hidden rounded bg-white text-left text-sm shadow-sm">
+			<thead class="bg-slate-100 text-slate-600">
+				<tr>
+					<th class="px-4 py-2">Título</th>
+					<th class="px-4 py-2">Cidade / Bairro</th>
+					<th class="px-4 py-2">Tipo</th>
+					<th class="px-4 py-2">Finalidade</th>
+					<th class="px-4 py-2">Preço</th>
+					<th class="px-4 py-2">Status</th>
+					<th class="px-4 py-2">Destaque</th>
+					<th class="px-4 py-2">Ações</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, imovel := range imoveis {
+					<tr class="border-t border-slate-100">
+						<td class="px-4 py-2 font-medium text-slate-900">{ imovel.Titulo }</td>
+						<td class="px-4 py-2 text-slate-600">{ imovel.Cidade } / { imovel.Bairro }</td>
+						<td class="px-4 py-2 text-slate-600">{ imovel.Tipo }</td>
+						<td class="px-4 py-2 text-slate-600">{ imovel.Finalidade }</td>
+						<td class="px-4 py-2 text-slate-600">{ fmt.Sprintf("%.2f", imovel.Preco) }</td>
+						<td class="px-4 py-2 text-slate-600">{ imovel.Status }</td>
+						<td class="px-4 py-2">
+							<form method="POST" action={ templ.URL(fmt.Sprintf("/admin/imoveis/%d/destaque", imovel.ID)) }>
+								if imovel.Destaque {
+									<button type="submit" class="text-amber-500" title="Remover destaque">★</button>
+								} else {
+									<button type="submit" class="text-slate-300" title="Marcar como destaque">★</button>
+								}
+							</form>
+						</td>
+						<td class="px-4 py-2">
+							<div class="flex gap-3">
+								<a href={ templ.URL(fmt.Sprintf("/admin/imoveis/%d/editar", imovel.ID)) } class="text-primary hover:underline">Editar</a>
+								<form method="POST" action={ templ.URL(fmt.Sprintf("/admin/imoveis/%d/excluir", imovel.ID)) } onsubmit="return confirm('Excluir este imóvel?')">
+									<button type="submit" class="text-red-600 hover:underline">Excluir</button>
+								</form>
+							</div>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		if len(imoveis) == 0 {
+			<p class="mt-6 text-slate-500">Nenhum imóvel cadastrado ainda.</p>
+		}
+	}
+}
