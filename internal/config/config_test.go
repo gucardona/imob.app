@@ -33,3 +33,31 @@ func TestLoad_FromEnv(t *testing.T) {
 		t.Errorf("expected database path /tmp/custom.db, got %q", cfg.DatabasePath)
 	}
 }
+
+func TestLoad_SessionSecretAndUploadsDir_Defaults(t *testing.T) {
+	t.Setenv("SESSION_SECRET", "")
+	t.Setenv("UPLOADS_DIR", "")
+
+	cfg := config.Load()
+
+	if cfg.SessionSecret != "" {
+		t.Errorf("expected empty default session secret, got %q", cfg.SessionSecret)
+	}
+	if cfg.UploadsDir != "uploads" {
+		t.Errorf("expected default uploads dir %q, got %q", "uploads", cfg.UploadsDir)
+	}
+}
+
+func TestLoad_SessionSecretAndUploadsDir_FromEnv(t *testing.T) {
+	t.Setenv("SESSION_SECRET", "super-secret-value")
+	t.Setenv("UPLOADS_DIR", "/var/data/uploads")
+
+	cfg := config.Load()
+
+	if cfg.SessionSecret != "super-secret-value" {
+		t.Errorf("expected session secret %q, got %q", "super-secret-value", cfg.SessionSecret)
+	}
+	if cfg.UploadsDir != "/var/data/uploads" {
+		t.Errorf("expected uploads dir %q, got %q", "/var/data/uploads", cfg.UploadsDir)
+	}
+}
