@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -175,6 +176,19 @@ func TestRouter_AdminImoveis_FullCRUDFlow(t *testing.T) {
 	destaqueRec := authedRequest(http.MethodPost, strings.TrimSuffix(location, "/editar")+"/destaque", nil, "")
 	if destaqueRec.Code != http.StatusSeeOther {
 		t.Fatalf("expected destaque toggle redirect %d, got %d", http.StatusSeeOther, destaqueRec.Code)
+	}
+
+	imovelID, err := strconv.ParseInt(strings.TrimSuffix(strings.TrimPrefix(location, "/admin/imoveis/"), "/editar"), 10, 64)
+	if err != nil {
+		t.Fatalf("failed to parse imóvel ID from location %q: %v", location, err)
+	}
+	imoveis := repo.NewImovelRepo(conn)
+	updated, err := imoveis.Get(context.Background(), imovelID)
+	if err != nil {
+		t.Fatalf("Get returned error: %v", err)
+	}
+	if updated.Destaque {
+		t.Error("expected destaque to be toggled off")
 	}
 
 	deleteRec := authedRequest(http.MethodPost, strings.TrimSuffix(location, "/editar")+"/excluir", nil, "")

@@ -136,10 +136,22 @@ func parseImovelForm(r *http.Request, id int64) (repo.Imovel, error) {
 	if err != nil {
 		return repo.Imovel{}, fmt.Errorf("preço inválido")
 	}
-	areaM2, _ := strconv.ParseFloat(r.FormValue("area_m2"), 64)
-	quartos, _ := strconv.Atoi(r.FormValue("quartos"))
-	banheiros, _ := strconv.Atoi(r.FormValue("banheiros"))
-	vagas, _ := strconv.Atoi(r.FormValue("vagas_garagem"))
+	areaM2, err := parseOptionalFloat(r.FormValue("area_m2"))
+	if err != nil {
+		return repo.Imovel{}, fmt.Errorf("área inválida")
+	}
+	quartos, err := parseOptionalInt(r.FormValue("quartos"))
+	if err != nil {
+		return repo.Imovel{}, fmt.Errorf("número de quartos inválido")
+	}
+	banheiros, err := parseOptionalInt(r.FormValue("banheiros"))
+	if err != nil {
+		return repo.Imovel{}, fmt.Errorf("número de banheiros inválido")
+	}
+	vagas, err := parseOptionalInt(r.FormValue("vagas_garagem"))
+	if err != nil {
+		return repo.Imovel{}, fmt.Errorf("número de vagas inválido")
+	}
 
 	return repo.Imovel{
 		ID:           id,
@@ -162,4 +174,18 @@ func parseImovelForm(r *http.Request, id int64) (repo.Imovel, error) {
 
 func parseIDPathValue(r *http.Request, name string) (int64, error) {
 	return strconv.ParseInt(r.PathValue(name), 10, 64)
+}
+
+func parseOptionalFloat(s string) (float64, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return strconv.ParseFloat(s, 64)
+}
+
+func parseOptionalInt(s string) (int, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return strconv.Atoi(s)
 }
