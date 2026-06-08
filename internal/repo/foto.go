@@ -93,3 +93,16 @@ func (r FotoRepo) Delete(ctx context.Context, imovelID, fotoID int64) error {
 	_, err := r.conn.ExecContext(ctx, `DELETE FROM fotos WHERE id = ? AND imovel_id = ?`, fotoID, imovelID)
 	return err
 }
+
+func (r FotoRepo) GetPrincipal(ctx context.Context, imovelID int64) (Foto, error) {
+	var f Foto
+	err := r.conn.QueryRowContext(ctx,
+		`SELECT id, imovel_id, caminho_original, caminho_thumb, caminho_grande, principal, ordem
+		 FROM fotos WHERE imovel_id = ? AND principal = 1 LIMIT 1`,
+		imovelID,
+	).Scan(&f.ID, &f.ImovelID, &f.CaminhoOriginal, &f.CaminhoThumb, &f.CaminhoGrande, &f.Principal, &f.Ordem)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Foto{}, ErrNotFound
+	}
+	return f, err
+}
