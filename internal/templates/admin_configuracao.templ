@@ -1,0 +1,77 @@
+package templates
+
+import "github.com/gucardona/imob.app/internal/repo"
+
+templ AdminConfiguracao(cfg repo.Configuracao) {
+	@AdminLayout("Configurações") {
+		<div class="max-w-2xl">
+			<h1 class="text-2xl font-bold mb-6">Configurações</h1>
+			<form method="POST" action="/admin/configuracao" enctype="multipart/form-data" class="space-y-6">
+				<fieldset class="border border-slate-200 rounded-lg p-4 space-y-4">
+					<legend class="text-sm font-semibold text-slate-700 px-2">Identidade</legend>
+					<div>
+						<label class="block text-sm font-medium text-slate-700 mb-1">Nome da Imobiliária</label>
+						<input type="text" name="nome_imobiliaria" value={ cfg.NomeImobiliaria } class="w-full border border-slate-300 rounded px-3 py-2 text-sm"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-slate-700 mb-1">Logo</label>
+						if cfg.LogoPath != "" {
+							<img src={ "/uploads/" + cfg.LogoPath } alt="Logo atual" class="h-12 mb-2 rounded"/>
+						}
+						<input type="file" name="logo" accept="image/*" class="block text-sm text-slate-600"/>
+						<p class="text-xs text-slate-400 mt-1">JPEG, PNG ou WebP. Redimensionada para 400 px de largura.</p>
+					</div>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-slate-700 mb-1">Cor primária</label>
+							<input type="text" name="cor_primaria" value={ cfg.CorPrimaria } placeholder="#1d4ed8" class="w-full border border-slate-300 rounded px-3 py-2 text-sm font-mono"/>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-slate-700 mb-1">Cor secundária</label>
+							<input type="text" name="cor_secundaria" value={ cfg.CorSecundaria } placeholder="#64748b" class="w-full border border-slate-300 rounded px-3 py-2 text-sm font-mono"/>
+						</div>
+					</div>
+				</fieldset>
+				<fieldset class="border border-slate-200 rounded-lg p-4 space-y-4">
+					<legend class="text-sm font-semibold text-slate-700 px-2">Contato</legend>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
+							<input type="text" name="telefone" value={ cfg.Telefone } class="w-full border border-slate-300 rounded px-3 py-2 text-sm"/>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-slate-700 mb-1">WhatsApp (somente dígitos)</label>
+							<input type="text" name="whatsapp" value={ cfg.Whatsapp } placeholder="5548999999999" class="w-full border border-slate-300 rounded px-3 py-2 text-sm"/>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+						<input type="email" name="email" value={ cfg.Email } class="w-full border border-slate-300 rounded px-3 py-2 text-sm"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-slate-700 mb-1">Endereço</label>
+						<input type="text" name="endereco" value={ cfg.Endereco } class="w-full border border-slate-300 rounded px-3 py-2 text-sm"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-slate-700 mb-1">Instagram (URL completa)</label>
+						<input type="url" name="instagram_url" value={ cfg.InstagramURL } placeholder="https://instagram.com/suaimobiliaria" class="w-full border border-slate-300 rounded px-3 py-2 text-sm"/>
+					</div>
+				</fieldset>
+				<fieldset class="border border-slate-200 rounded-lg p-4 space-y-4">
+					<legend class="text-sm font-semibold text-slate-700 px-2">Textos</legend>
+					<div>
+						<label class="block text-sm font-medium text-slate-700 mb-1">Texto da página inicial</label>
+						<textarea name="texto_home" rows="3" class="w-full border border-slate-300 rounded px-3 py-2 text-sm">{ cfg.TextoHome }</textarea>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-slate-700 mb-1">Texto sobre a imobiliária</label>
+						<textarea name="texto_sobre" rows="5" class="w-full border border-slate-300 rounded px-3 py-2 text-sm">{ cfg.TextoSobre }</textarea>
+					</div>
+				</fieldset>
+				<div>
+					<button type="submit" class="bg-primary text-white rounded px-6 py-2 text-sm font-medium hover:opacity-90">Salvar</button>
+				</div>
+			</form>
+		</div>
+	}
+}
