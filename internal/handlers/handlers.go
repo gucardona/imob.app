@@ -30,6 +30,7 @@ func NewRouter(deps Deps) http.Handler {
 	authHandlers := newAuthHandlers(sessions, admins)
 	imovelHandlers := newImovelHandlers(deps.Config.UploadsDir, imoveis, fotos)
 	fotoHandlers := newFotoHandlers(deps.Config.UploadsDir, imoveis, fotos)
+	cfgHandlers := newConfigHandlers(deps.Config.UploadsDir, cfgRepo)
 
 	requireAuth := RequireAuth(sessions)
 
@@ -57,6 +58,9 @@ func NewRouter(deps Deps) http.Handler {
 	mux.Handle("POST /admin/imoveis/{id}/fotos", requireAuth(http.HandlerFunc(fotoHandlers.upload)))
 	mux.Handle("POST /admin/imoveis/{id}/fotos/{fotoID}/principal", requireAuth(http.HandlerFunc(fotoHandlers.setPrincipal)))
 	mux.Handle("POST /admin/imoveis/{id}/fotos/{fotoID}/excluir", requireAuth(http.HandlerFunc(fotoHandlers.delete)))
+
+	mux.Handle("GET /admin/configuracao", requireAuth(http.HandlerFunc(cfgHandlers.showForm)))
+	mux.Handle("POST /admin/configuracao", requireAuth(http.HandlerFunc(cfgHandlers.update)))
 
 	return mux
 }

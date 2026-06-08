@@ -461,6 +461,101 @@ func TestRouter_PublicImovelDetail_NotFound(t *testing.T) {
 	}
 }
 
+func TestRouter_AdminConfiguracao_ShowFormRequiresAuth(t *testing.T) {
+	router := newTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/configuracao", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("expected redirect %d, got %d", http.StatusSeeOther, rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/admin/login" {
+		t.Errorf("expected redirect to /admin/login, got %q", loc)
+	}
+}
+
+func TestRouter_AdminConfiguracao_ShowFormReturnsOK(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+	cfg := config.Config{SessionSecret: "test-secret", UploadsDir: t.TempDir()}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+	cookies := loginAsTestAdmin(t, conn, router)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/configuracao", nil)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "Configurações") {
+		t.Errorf("expected body to contain 'Configurações'")
+	}
+}
+
+func TestRouter_AdminConfiguracao_UpdatePersistsTextFields(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+	cfg := config.Config{SessionSecret: "test-secret", UploadsDir: t.TempDir()}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+	cookies := loginAsTestAdmin(t, conn, router)
+
+	form := url.Values{
+		"nome_imobiliaria": {"Imobiliária Litoral"},
+		"telefone":         {"48 3333-3333"},
+		"whatsapp":         {"5548999999999"},
+		"email":            {"contato@litoral.com"},
+		"endereco":         {"Av. Beira Mar, 500"},
+		"instagram_url":    {"https://instagram.com/litoral"},
+		"cor_primaria":     {"#1d4ed8"},
+		"cor_secundaria":   {"#64748b"},
+		"texto_home":       {"Bem-vindos à Imobiliária Litoral."},
+		"texto_sobre":      {"Trabalhamos com imóveis desde 2000."},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/admin/configuracao", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("expected redirect %d, got %d: %s", http.StatusSeeOther, rec.Code, rec.Body.String())
+	}
+
+	// Verify persisted in DB
+	saved, err := repo.NewConfiguracaoRepo(conn).Get(context.Background())
+	if err != nil {
+		t.Fatalf("Get returned error: %v", err)
+	}
+	if saved.NomeImobiliaria != "Imobiliária Litoral" {
+		t.Errorf("expected NomeImobiliaria %q, got %q", "Imobiliária Litoral", saved.NomeImobiliaria)
+	}
+	if saved.Whatsapp != "5548999999999" {
+		t.Errorf("expected Whatsapp %q, got %q", "5548999999999", saved.Whatsapp)
+	}
+}
+
 func uploadSampleFoto(t *testing.T, router http.Handler, cookies []*http.Cookie, imovelID int64) *httptest.ResponseRecorder {
 	t.Helper()
 
