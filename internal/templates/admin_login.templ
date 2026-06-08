@@ -1,0 +1,23 @@
+package templates
+
+templ AdminLogin(errorMessage string) {
+	@Layout("Entrar") {
+		<main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
+			<h1 class="text-2xl font-bold text-primary">Painel administrativo</h1>
+			if errorMessage != "" {
+				<p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{ errorMessage }</p>
+			}
+			<form method="POST" action="/admin/login" class="mt-6 flex flex-col gap-4">
+				<label class="flex flex-col gap-1 text-sm font-medium text-slate-700">
+					E-mail
+					<input type="email" name="email" required autofocus class="rounded border border-slate-300 px-3 py-2"/>
+				</label>
+				<label class="flex flex-col gap-1 text-sm font-medium text-slate-700">
+					Senha
+					<input type="password" name="senha" required class="rounded border border-slate-300 px-3 py-2"/>
+				</label>
+				<button type="submit" class="rounded bg-primary px-4 py-2 font-medium text-white">Entrar</button>
+			</form>
+		</main>
+	}
+}
