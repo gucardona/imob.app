@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
 
 type Configuracao struct {
@@ -38,5 +39,8 @@ func (r ConfiguracaoRepo) Get(ctx context.Context) (Configuracao, error) {
 		&c.Endereco, &c.Telefone, &c.Whatsapp, &c.Email,
 		&c.InstagramURL, &c.TextoSobre, &c.TextoHome,
 	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Configuracao{}, ErrNotFound
+	}
 	return c, err
 }

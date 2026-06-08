@@ -18,4 +18,10 @@ func TestConfiguracaoRepo_Get_ReturnsDefaults(t *testing.T) {
 	if cfg.CorPrimaria != "#1d4ed8" {
 		t.Errorf("expected default CorPrimaria %q, got %q", "#1d4ed8", cfg.CorPrimaria)
 	}
+	if cfg.CorSecundaria != "#64748b" {
+		t.Errorf("expected default CorSecundaria %q, got %q", "#64748b", cfg.CorSecundaria)
+	}
+	if cfg.NomeImobiliaria != "" {
+		t.Errorf("expected empty NomeImobiliaria, got %q", cfg.NomeImobiliaria)
+	}
 }
