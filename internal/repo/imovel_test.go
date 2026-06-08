@@ -2,6 +2,7 @@ package repo_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/gucardona/imob.app/internal/repo"
@@ -171,5 +172,125 @@ func TestSlugify_NormalizesAccentsAndPunctuation(t *testing.T) {
 		if got := repo.Slugify(input); got != want {
 			t.Errorf("Slugify(%q) = %q, want %q", input, got, want)
 		}
+	}
+}
+
+func TestImovelRepo_GetBySlug_ReturnsImovel(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+
+	id, err := imoveis.Create(ctx, sampleImovel())
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	got, err := imoveis.GetBySlug(ctx, "casa-com-vista-para-o-mar")
+	if err != nil {
+		t.Fatalf("GetBySlug returned error: %v", err)
+	}
+	if got.ID != id {
+		t.Errorf("expected ID %d, got %d", id, got.ID)
+	}
+}
+
+func TestImovelRepo_GetBySlug_NotFound(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+
+	_, err := imoveis.GetBySlug(ctx, "slug-que-nao-existe")
+	if !errors.Is(err, repo.ErrNotFound) {
+		t.Errorf("expected repo.ErrNotFound, got %v", err)
+	}
+}
+
+func TestImovelRepo_ListPublic_OnlyDisponivel(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+
+	disponivel := sampleImovel()
+	disponivel.Status = "disponivel"
+	if _, err := imoveis.Create(ctx, disponivel); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	vendido := sampleImovel()
+	vendido.Titulo = "Casa Vendida"
+	vendido.Status = "vendido"
+	if _, err := imoveis.Create(ctx, vendido); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	list, err := imoveis.ListPublic(ctx, repo.ImovelFilter{})
+	if err != nil {
+		t.Fatalf("ListPublic returned error: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 disponivel imovel, got %d", len(list))
+	}
+	if list[0].Status != "disponivel" {
+		t.Errorf("expected status disponivel, got %q", list[0].Status)
+	}
+}
+
+func TestImovelRepo_ListPublic_FilterByFinalidade(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+
+	venda := sampleImovel()
+	venda.Finalidade = "venda"
+	if _, err := imoveis.Create(ctx, venda); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	aluguel := sampleImovel()
+	aluguel.Titulo = "Casa para Alugar"
+	aluguel.Finalidade = "aluguel"
+	if _, err := imoveis.Create(ctx, aluguel); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	list, err := imoveis.ListPublic(ctx, repo.ImovelFilter{Finalidade: "venda"})
+	if err != nil {
+		t.Fatalf("ListPublic returned error: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 venda imovel, got %d", len(list))
+	}
+	if list[0].Finalidade != "venda" {
+		t.Errorf("expected finalidade venda, got %q", list[0].Finalidade)
+	}
+}
+
+func TestImovelRepo_ListPublic_OnlyDestaque(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+
+	regular := sampleImovel()
+	regular.Destaque = false
+	if _, err := imoveis.Create(ctx, regular); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	destaque := sampleImovel()
+	destaque.Titulo = "Casa em Destaque"
+	destaque.Destaque = true
+	if _, err := imoveis.Create(ctx, destaque); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	list, err := imoveis.ListPublic(ctx, repo.ImovelFilter{OnlyDestaque: true})
+	if err != nil {
+		t.Fatalf("ListPublic returned error: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 destaque imovel, got %d", len(list))
+	}
+	if !list[0].Destaque {
+		t.Error("expected Destaque to be true")
 	}
 }
