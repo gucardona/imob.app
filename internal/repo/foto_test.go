@@ -106,7 +106,7 @@ func TestFotoRepo_Delete_RemovesFoto(t *testing.T) {
 		t.Fatalf("Create returned error: %v", err)
 	}
 
-	if err := fotos.Delete(ctx, id); err != nil {
+	if err := fotos.Delete(ctx, imovelID, id); err != nil {
 		t.Fatalf("Delete returned error: %v", err)
 	}
 

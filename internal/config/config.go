@@ -3,10 +3,11 @@ package config
 import "os"
 
 type Config struct {
-	Port          string
-	DatabasePath  string
-	SessionSecret string
-	UploadsDir    string
+	Port           string
+	DatabasePath   string
+	SessionSecret  string
+	UploadsDir     string
+	SecureCookies  bool
 }
 
 func Load() Config {
@@ -15,6 +16,7 @@ func Load() Config {
 		DatabasePath:  getEnvOrDefault("DATABASE_PATH", "imob.db"),
 		SessionSecret: getEnvOrDefault("SESSION_SECRET", ""),
 		UploadsDir:    getEnvOrDefault("UPLOADS_DIR", "uploads"),
+		SecureCookies: os.Getenv("SECURE_COOKIES") != "",
 	}
 }
 

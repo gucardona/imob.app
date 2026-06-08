@@ -22,6 +22,10 @@ func main() {
 func runServer() {
 	cfg := config.Load()
 
+	if cfg.SessionSecret == "" {
+		log.Fatal("SESSION_SECRET environment variable is required")
+	}
+
 	conn, err := db.Open(cfg.DatabasePath)
 	if err != nil {
 		log.Fatalf("opening database: %v", err)

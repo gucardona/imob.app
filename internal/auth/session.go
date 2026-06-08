@@ -16,10 +16,11 @@ const cookieName = "imob_session"
 type SessionManager struct {
 	secret []byte
 	ttl    time.Duration
+	secure bool
 }
 
-func NewSessionManager(secret string, ttl time.Duration) SessionManager {
-	return SessionManager{secret: []byte(secret), ttl: ttl}
+func NewSessionManager(secret string, ttl time.Duration, secure bool) SessionManager {
+	return SessionManager{secret: []byte(secret), ttl: ttl, secure: secure}
 }
 
 func (m SessionManager) Issue(w http.ResponseWriter, adminID int64) {
@@ -34,6 +35,7 @@ func (m SessionManager) Issue(w http.ResponseWriter, adminID int64) {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  expires,
+		Secure:   m.secure,
 	})
 }
 

@@ -21,13 +21,13 @@ type Deps struct {
 }
 
 func NewRouter(deps Deps) http.Handler {
-	sessions := auth.NewSessionManager(deps.Config.SessionSecret, sessionTTL)
+	sessions := auth.NewSessionManager(deps.Config.SessionSecret, sessionTTL, deps.Config.SecureCookies)
 	admins := repo.NewAdminRepo(deps.Conn)
 	imoveis := repo.NewImovelRepo(deps.Conn)
 	fotos := repo.NewFotoRepo(deps.Conn)
 
 	authHandlers := newAuthHandlers(sessions, admins)
-	imovelHandlers := newImovelHandlers(imoveis, fotos)
+	imovelHandlers := newImovelHandlers(deps.Config.UploadsDir, imoveis, fotos)
 	fotoHandlers := newFotoHandlers(deps.Config.UploadsDir, imoveis, fotos)
 
 	requireAuth := RequireAuth(sessions)

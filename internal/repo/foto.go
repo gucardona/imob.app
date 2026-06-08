@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
 
 type Foto struct {
@@ -76,7 +77,19 @@ func (r FotoRepo) SetPrincipal(ctx context.Context, imovelID, fotoID int64) erro
 	return tx.Commit()
 }
 
-func (r FotoRepo) Delete(ctx context.Context, id int64) error {
-	_, err := r.conn.ExecContext(ctx, `DELETE FROM fotos WHERE id = ?`, id)
+func (r FotoRepo) GetByID(ctx context.Context, fotoID int64) (Foto, error) {
+	var f Foto
+	err := r.conn.QueryRowContext(ctx,
+		`SELECT id, imovel_id, caminho_original, caminho_thumb, caminho_grande, principal, ordem FROM fotos WHERE id = ?`,
+		fotoID,
+	).Scan(&f.ID, &f.ImovelID, &f.CaminhoOriginal, &f.CaminhoThumb, &f.CaminhoGrande, &f.Principal, &f.Ordem)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Foto{}, ErrNotFound
+	}
+	return f, err
+}
+
+func (r FotoRepo) Delete(ctx context.Context, imovelID, fotoID int64) error {
+	_, err := r.conn.ExecContext(ctx, `DELETE FROM fotos WHERE id = ? AND imovel_id = ?`, fotoID, imovelID)
 	return err
 }

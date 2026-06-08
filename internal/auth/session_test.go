@@ -10,7 +10,7 @@ import (
 )
 
 func TestSessions_IssueThenVerify_ReturnsAdminID(t *testing.T) {
-	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", 7*24*time.Hour)
+	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", 7*24*time.Hour, false)
 
 	rec := httptest.NewRecorder()
 	sessions.Issue(rec, 42)
@@ -30,7 +30,7 @@ func TestSessions_IssueThenVerify_ReturnsAdminID(t *testing.T) {
 }
 
 func TestSessions_Verify_RejectsTamperedCookie(t *testing.T) {
-	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", 7*24*time.Hour)
+	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", 7*24*time.Hour, false)
 
 	rec := httptest.NewRecorder()
 	sessions.Issue(rec, 42)
@@ -46,7 +46,7 @@ func TestSessions_Verify_RejectsTamperedCookie(t *testing.T) {
 }
 
 func TestSessions_Verify_RejectsExpiredCookie(t *testing.T) {
-	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", -1*time.Hour)
+	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", -1*time.Hour, false)
 
 	rec := httptest.NewRecorder()
 	sessions.Issue(rec, 42)
@@ -61,7 +61,7 @@ func TestSessions_Verify_RejectsExpiredCookie(t *testing.T) {
 }
 
 func TestSessions_Verify_RejectsMissingCookie(t *testing.T) {
-	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", 7*24*time.Hour)
+	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", 7*24*time.Hour, false)
 
 	req := httptest.NewRequest(http.MethodGet, "/admin/imoveis", nil)
 
@@ -71,7 +71,7 @@ func TestSessions_Verify_RejectsMissingCookie(t *testing.T) {
 }
 
 func TestSessions_Clear_RemovesCookie(t *testing.T) {
-	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", 7*24*time.Hour)
+	sessions := auth.NewSessionManager("test-secret-do-not-use-in-prod", 7*24*time.Hour, false)
 
 	rec := httptest.NewRecorder()
 	sessions.Clear(rec)

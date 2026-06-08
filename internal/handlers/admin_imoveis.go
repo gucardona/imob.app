@@ -3,6 +3,8 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gucardona/imob.app/internal/repo"
@@ -10,12 +12,13 @@ import (
 )
 
 type imovelHandlers struct {
-	imoveis repo.ImovelRepo
-	fotos   repo.FotoRepo
+	uploadsDir string
+	imoveis    repo.ImovelRepo
+	fotos      repo.FotoRepo
 }
 
-func newImovelHandlers(imoveis repo.ImovelRepo, fotos repo.FotoRepo) imovelHandlers {
-	return imovelHandlers{imoveis: imoveis, fotos: fotos}
+func newImovelHandlers(uploadsDir string, imoveis repo.ImovelRepo, fotos repo.FotoRepo) imovelHandlers {
+	return imovelHandlers{uploadsDir: uploadsDir, imoveis: imoveis, fotos: fotos}
 }
 
 func (h imovelHandlers) list(w http.ResponseWriter, r *http.Request) {
@@ -102,6 +105,9 @@ func (h imovelHandlers) delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "erro ao excluir imóvel", http.StatusInternalServerError)
 		return
 	}
+
+	// Remove the imóvel's upload directory — ignore errors (directory may not exist)
+	_ = os.RemoveAll(filepath.Join(h.uploadsDir, strconv.FormatInt(id, 10)))
 
 	http.Redirect(w, r, "/admin/imoveis", http.StatusSeeOther)
 }

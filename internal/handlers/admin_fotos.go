@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -122,9 +123,20 @@ func (h fotoHandlers) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.fotos.Delete(r.Context(), fotoID); err != nil {
+	foto, err := h.fotos.GetByID(r.Context(), fotoID)
+	if err != nil {
+		http.Error(w, "foto não encontrada", http.StatusNotFound)
+		return
+	}
+
+	if err := h.fotos.Delete(r.Context(), imovelID, fotoID); err != nil {
 		http.Error(w, "erro ao remover foto", http.StatusInternalServerError)
 		return
+	}
+
+	// Remove files from disk — ignore errors (files may already be missing)
+	for _, rel := range []string{foto.CaminhoOriginal, foto.CaminhoThumb, foto.CaminhoGrande} {
+		_ = os.Remove(filepath.Join(h.uploadsDir, rel))
 	}
 
 	h.renderFragment(w, r, imovelID)
