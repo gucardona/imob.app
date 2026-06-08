@@ -123,7 +123,7 @@ func (h fotoHandlers) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	foto, err := h.fotos.GetByID(r.Context(), fotoID)
+	foto, err := h.fotos.GetByID(r.Context(), imovelID, fotoID)
 	if err != nil {
 		http.Error(w, "foto não encontrada", http.StatusNotFound)
 		return
