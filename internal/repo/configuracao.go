@@ -44,3 +44,18 @@ func (r ConfiguracaoRepo) Get(ctx context.Context) (Configuracao, error) {
 	}
 	return c, err
 }
+
+func (r ConfiguracaoRepo) Update(ctx context.Context, c Configuracao) error {
+	_, err := r.conn.ExecContext(ctx, `
+		UPDATE configuracao SET
+			nome_imobiliaria = ?, logo_path = ?, cor_primaria = ?, cor_secundaria = ?,
+			endereco = ?, telefone = ?, whatsapp = ?, email = ?,
+			instagram_url = ?, texto_sobre = ?, texto_home = ?
+		WHERE id = 1
+	`,
+		c.NomeImobiliaria, c.LogoPath, c.CorPrimaria, c.CorSecundaria,
+		c.Endereco, c.Telefone, c.Whatsapp, c.Email,
+		c.InstagramURL, c.TextoSobre, c.TextoHome,
+	)
+	return err
+}
