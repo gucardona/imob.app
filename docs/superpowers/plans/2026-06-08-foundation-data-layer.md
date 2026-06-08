@@ -6,7 +6,7 @@
 
 **Architecture:** Single Go module (`github.com/gucardona/imob.app`) with `cmd/imob-app` as the entrypoint and `internal/{config,db,handlers,templates,assets}` packages. Static assets (compiled Tailwind CSS) are embedded into the binary via `go:embed` and served through `http.FileServerFS`. The custom migration runner applies embedded `.sql` files tracked in a `schema_migrations` table.
 
-**Tech Stack:** Go 1.23 (stdlib `net/http` w/ method+wildcard routing), `templ` (typed templates), Tailwind CSS v4 (standalone CLI, no Node), `modernc.org/sqlite` (pure-Go driver, no CGO), `database/sql`.
+**Tech Stack:** Go 1.22 (stdlib `net/http` w/ method+wildcard routing), `templ` (typed templates), Tailwind CSS v4 (standalone CLI, no Node), `modernc.org/sqlite` (pure-Go driver, no CGO), `database/sql`.
 
 ---
 
@@ -57,7 +57,7 @@ Expected: creates `go.mod` with `module github.com/gucardona/imob.app` and a `go
 Open `go.mod` and ensure the version line reads:
 
 ```
-go 1.23
+go 1.22
 ```
 
 - [ ] **Step 3: Create the directory layout**
