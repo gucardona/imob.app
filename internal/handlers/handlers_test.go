@@ -1,9 +1,15 @@
 package handlers_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"fmt"
+	"image"
+	"image/color"
+	"image/jpeg"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -200,4 +206,116 @@ func TestRouter_AdminImoveis_FullCRUDFlow(t *testing.T) {
 	if strings.Contains(listRec.Body.String(), "Casa de Praia Reformada") {
 		t.Errorf("expected deleted imóvel to be gone from the list, got: %s", listRec.Body.String())
 	}
+}
+
+func TestRouter_AdminFotos_UploadPrincipalAndRemoveFlow(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+
+	uploadsDir := t.TempDir()
+	cfg := config.Config{SessionSecret: "test-secret-do-not-use-in-prod", UploadsDir: uploadsDir}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+	cookies := loginAsTestAdmin(t, conn, router)
+
+	imoveis := repo.NewImovelRepo(conn)
+	imovelID, err := imoveis.Create(context.Background(), repo.Imovel{
+		Titulo: "Imóvel com Fotos", Tipo: "casa", Finalidade: "venda",
+		Cidade: "Blumenau", Bairro: "Centro", Status: "disponivel", Preco: 500000,
+	})
+	if err != nil {
+		t.Fatalf("creating imóvel returned error: %v", err)
+	}
+
+	uploadRec := uploadSampleFoto(t, router, cookies, imovelID)
+	if uploadRec.Code != http.StatusOK {
+		t.Fatalf("expected upload status %d, got %d: %s", http.StatusOK, uploadRec.Code, uploadRec.Body.String())
+	}
+	if !strings.Contains(uploadRec.Body.String(), "fotos-grid") {
+		t.Errorf("expected fragment to contain the fotos grid, got: %s", uploadRec.Body.String())
+	}
+
+	fotos := repo.NewFotoRepo(conn)
+	list, err := fotos.ListByImovel(context.Background(), imovelID)
+	if err != nil {
+		t.Fatalf("ListByImovel returned error: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 foto after upload, got %d", len(list))
+	}
+	fotoID := list[0].ID
+
+	principalReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/imoveis/%d/fotos/%d/principal", imovelID, fotoID), nil)
+	for _, c := range cookies {
+		principalReq.AddCookie(c)
+	}
+	principalRec := httptest.NewRecorder()
+	router.ServeHTTP(principalRec, principalReq)
+	if principalRec.Code != http.StatusOK {
+		t.Fatalf("expected principal toggle status %d, got %d", http.StatusOK, principalRec.Code)
+	}
+
+	list, _ = fotos.ListByImovel(context.Background(), imovelID)
+	if !list[0].Principal {
+		t.Error("expected foto to be marked principal")
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/imoveis/%d/fotos/%d/excluir", imovelID, fotoID), nil)
+	for _, c := range cookies {
+		deleteReq.AddCookie(c)
+	}
+	deleteRec := httptest.NewRecorder()
+	router.ServeHTTP(deleteRec, deleteReq)
+	if deleteRec.Code != http.StatusOK {
+		t.Fatalf("expected delete status %d, got %d", http.StatusOK, deleteRec.Code)
+	}
+
+	list, _ = fotos.ListByImovel(context.Background(), imovelID)
+	if len(list) != 0 {
+		t.Errorf("expected 0 fotos after removal, got %d", len(list))
+	}
+}
+
+func uploadSampleFoto(t *testing.T, router http.Handler, cookies []*http.Cookie, imovelID int64) *httptest.ResponseRecorder {
+	t.Helper()
+
+	img := image.NewRGBA(image.Rect(0, 0, 600, 400))
+	for y := 0; y < 400; y++ {
+		for x := 0; x < 600; x++ {
+			img.Set(x, y, color.RGBA{R: uint8(x % 256), G: uint8(y % 256), B: 80, A: 255})
+		}
+	}
+	var imgBuf bytes.Buffer
+	if err := jpeg.Encode(&imgBuf, img, &jpeg.Options{Quality: 90}); err != nil {
+		t.Fatalf("encoding sample JPEG: %v", err)
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("fotos", "foto.jpg")
+	if err != nil {
+		t.Fatalf("creating form file: %v", err)
+	}
+	if _, err := part.Write(imgBuf.Bytes()); err != nil {
+		t.Fatalf("writing form file: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("closing multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/imoveis/%d/fotos", imovelID), &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
 }
