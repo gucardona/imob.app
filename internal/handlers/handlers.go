@@ -27,7 +27,7 @@ func NewRouter(deps Deps) http.Handler {
 	fotos := repo.NewFotoRepo(deps.Conn)
 
 	authHandlers := newAuthHandlers(sessions, admins)
-	imovelHandlers := newImovelHandlers(imoveis)
+	imovelHandlers := newImovelHandlers(imoveis, fotos)
 	fotoHandlers := newFotoHandlers(deps.Config.UploadsDir, imoveis, fotos)
 
 	requireAuth := RequireAuth(sessions)
