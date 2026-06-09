@@ -1,16 +1,19 @@
 package templates
 
-import "github.com/gucardona/imob.app/internal/repo"
+import (
+	"regexp"
+
+	"github.com/gucardona/imob.app/internal/repo"
+)
+
+var hexColorRe = regexp.MustCompile(`^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$`)
 
 func colorStyle(cfg repo.Configuracao) string {
-	if cfg.CorPrimaria == "" && cfg.CorSecundaria == "" {
-		return ""
-	}
 	s := ""
-	if cfg.CorPrimaria != "" {
+	if hexColorRe.MatchString(cfg.CorPrimaria) {
 		s += "--color-primary:" + cfg.CorPrimaria + ";"
 	}
-	if cfg.CorSecundaria != "" {
+	if hexColorRe.MatchString(cfg.CorSecundaria) {
 		s += "--color-secondary:" + cfg.CorSecundaria + ";"
 	}
 	return s
