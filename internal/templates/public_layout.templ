@@ -11,10 +11,17 @@ templ PublicLayout(title string, cfg repo.Configuracao) {
 			<title>{ title } — { cfg.NomeImobiliaria }</title>
 			<link rel="stylesheet" href="/static/css/output.css"/>
 		</head>
-		<body class="min-h-screen bg-white text-slate-900">
+		<body class="min-h-screen bg-white text-slate-900" style={ colorStyle(cfg) }>
 			<header class="bg-primary text-white">
 				<div class="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
-					<a href="/" class="text-xl font-bold">{ cfg.NomeImobiliaria }</a>
+					<a href="/" class="flex items-center gap-2">
+						if cfg.LogoPath != "" {
+							<img src={ "/uploads/" + cfg.LogoPath } alt={ cfg.NomeImobiliaria } class="h-8 w-auto"/>
+						}
+						if cfg.NomeImobiliaria != "" {
+							<span class="text-xl font-bold">{ cfg.NomeImobiliaria }</span>
+						}
+					</a>
 					<nav class="flex gap-6 text-sm">
 						<a href="/imoveis" class="hover:underline">Imóveis</a>
 						if cfg.Whatsapp != "" {
@@ -35,6 +42,9 @@ templ PublicLayout(title string, cfg repo.Configuracao) {
 					}
 					if cfg.Email != "" {
 						<p><a href={ templ.SafeURL("mailto:" + cfg.Email) } class="hover:underline">{ cfg.Email }</a></p>
+					}
+					if cfg.InstagramURL != "" {
+						<p><a href={ templ.SafeURL(cfg.InstagramURL) } target="_blank" class="hover:underline">Instagram</a></p>
 					}
 				</div>
 			</footer>
