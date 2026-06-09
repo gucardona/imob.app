@@ -92,7 +92,7 @@ func (h configHandlers) update(w http.ResponseWriter, r *http.Request) {
 func saveLogo(uploadsDir string, data []byte) (string, error) {
 	ct := http.DetectContentType(data)
 	switch ct {
-	case "image/jpeg", "image/png", "image/webp", "image/gif":
+	case "image/jpeg", "image/png", "image/gif":
 		// ok
 	default:
 		return "", fmt.Errorf("tipo de imagem não suportado: %s", ct)
