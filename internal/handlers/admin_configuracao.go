@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -40,6 +41,7 @@ func (h configHandlers) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 11<<20)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		if err2 := r.ParseForm(); err2 != nil {
 			http.Error(w, "erro ao processar formulário", http.StatusBadRequest)
@@ -88,6 +90,13 @@ func (h configHandlers) update(w http.ResponseWriter, r *http.Request) {
 // saveLogo decodes image data, resizes to max 400 px wide, saves as JPEG to
 // $uploadsDir/logo/logo.jpg, and returns the relative path "logo/logo.jpg".
 func saveLogo(uploadsDir string, data []byte) (string, error) {
+	ct := http.DetectContentType(data)
+	switch ct {
+	case "image/jpeg", "image/png", "image/webp", "image/gif":
+		// ok
+	default:
+		return "", fmt.Errorf("tipo de imagem não suportado: %s", ct)
+	}
 	img, err := imaging.Decode(bytes.NewReader(data), imaging.AutoOrientation(true))
 	if err != nil {
 		return "", err
