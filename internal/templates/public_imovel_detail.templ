@@ -7,73 +7,148 @@ import (
 
 templ ImovelDetail(imovel repo.Imovel, fotos []repo.Foto, cfg repo.Configuracao, uploadsURL string) {
 	@PublicLayout(imovel.Titulo, cfg) {
-		<main class="mx-auto max-w-5xl px-4 py-8">
+		<div class="max-w-6xl mx-auto px-6 py-8">
+			<!-- Breadcrumb -->
+			<div class="flex items-center gap-2 text-sm text-gray-400 mb-6">
+				<a href="/" class="hover:text-teal-600 transition-colors">Início</a>
+				<span>›</span>
+				<a href="/imoveis" class="hover:text-teal-600 transition-colors">Imóveis</a>
+				<span>›</span>
+				<span class="text-gray-600 truncate">{ imovel.Titulo }</span>
+			</div>
+			<!-- Gallery -->
 			if len(fotos) > 0 {
-				<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-8">
-					for _, f := range fotos {
-						<a href={ templ.SafeURL(uploadsURL + "/" + f.CaminhoGrande) } target="_blank">
-							<img
-								src={ uploadsURL + "/" + f.CaminhoThumb }
-								alt={ imovel.Titulo }
-								class="w-full h-40 object-cover rounded"
-							/>
-						</a>
+				<div class="mb-8">
+					if len(fotos) == 1 {
+						<div class="rounded-2xl overflow-hidden h-[400px]">
+							<a href={ templ.SafeURL(uploadsURL + "/" + fotos[0].CaminhoGrande) } target="_blank">
+								<img
+									src={ uploadsURL + "/" + fotos[0].CaminhoGrande }
+									alt={ imovel.Titulo }
+									class="w-full h-full object-cover"
+								/>
+							</a>
+						</div>
+					} else {
+						<div class="grid grid-cols-4 gap-2">
+							<div class="col-span-3 rounded-2xl overflow-hidden h-[380px]">
+								<a href={ templ.SafeURL(uploadsURL + "/" + fotos[0].CaminhoGrande) } target="_blank">
+									<img
+										src={ uploadsURL + "/" + fotos[0].CaminhoGrande }
+										alt={ imovel.Titulo }
+										class="w-full h-full object-cover hover:opacity-95 transition-opacity"
+									/>
+								</a>
+							</div>
+							<div class="flex flex-col gap-2">
+								for _, f := range fotos[1:] {
+									<a
+										href={ templ.SafeURL(uploadsURL + "/" + f.CaminhoGrande) }
+										target="_blank"
+										class="block flex-1 overflow-hidden rounded-xl"
+									>
+										<img
+											src={ uploadsURL + "/" + f.CaminhoThumb }
+											alt={ imovel.Titulo }
+											class="w-full h-full object-cover hover:opacity-80 transition-opacity"
+										/>
+									</a>
+								}
+							</div>
+						</div>
 					}
 				</div>
 			}
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-				<div class="md:col-span-2">
-					<p class="text-xs text-slate-500 uppercase tracking-wide mb-1">{ imovel.Tipo } — { imovel.Finalidade }</p>
-					<h1 class="text-3xl font-bold mb-2">{ imovel.Titulo }</h1>
-					<p class="text-slate-600 mb-4">{ imovel.Cidade }, { imovel.Bairro }</p>
+			<!-- Main content -->
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<!-- Info -->
+				<div class="lg:col-span-2">
+					<div class="flex flex-wrap gap-2 mb-4">
+						if imovel.Finalidade == "venda" {
+							<span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-100 text-teal-700">Venda</span>
+						} else if imovel.Finalidade == "aluguel" {
+							<span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-orange-100 text-orange-700">Aluguel</span>
+						}
+						<span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">{ imovel.Tipo }</span>
+					</div>
+					<h1 class="text-3xl font-bold text-gray-900 mb-2">{ imovel.Titulo }</h1>
+					<p class="text-gray-500 mb-8">📍 { imovel.Bairro }, { imovel.Cidade }</p>
+					<!-- Feature pills -->
+					<div class="flex flex-wrap gap-4 mb-8">
+						if imovel.AreaM2 > 0 {
+							<div class="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 text-center min-w-[80px]">
+								<p class="text-xl font-bold text-gray-900">{ fmt.Sprintf("%.0f", imovel.AreaM2) }</p>
+								<p class="text-xs text-gray-400 mt-0.5">m²</p>
+							</div>
+						}
+						if imovel.Quartos > 0 {
+							<div class="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 text-center min-w-[80px]">
+								<p class="text-xl font-bold text-gray-900">{ fmt.Sprintf("%d", imovel.Quartos) }</p>
+								<p class="text-xs text-gray-400 mt-0.5">Quartos</p>
+							</div>
+						}
+						if imovel.Banheiros > 0 {
+							<div class="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 text-center min-w-[80px]">
+								<p class="text-xl font-bold text-gray-900">{ fmt.Sprintf("%d", imovel.Banheiros) }</p>
+								<p class="text-xs text-gray-400 mt-0.5">Banheiros</p>
+							</div>
+						}
+						if imovel.VagasGaragem > 0 {
+							<div class="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 text-center min-w-[80px]">
+								<p class="text-xl font-bold text-gray-900">{ fmt.Sprintf("%d", imovel.VagasGaragem) }</p>
+								<p class="text-xs text-gray-400 mt-0.5">Vagas</p>
+							</div>
+						}
+					</div>
 					if imovel.Descricao != "" {
-						<p class="text-slate-700 mb-6">{ imovel.Descricao }</p>
+						<div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+							<h2 class="font-semibold text-gray-900 mb-3">Sobre o imóvel</h2>
+							<p class="text-gray-600 leading-relaxed text-sm">{ imovel.Descricao }</p>
+						</div>
 					}
-					<table class="text-sm w-full border-collapse">
-						<tbody>
-							if imovel.AreaM2 > 0 {
-								<tr class="border-b border-slate-100">
-									<td class="py-2 text-slate-500 w-40">Área</td>
-									<td class="py-2 font-medium">{ fmt.Sprintf("%.0f m²", imovel.AreaM2) }</td>
-								</tr>
-							}
-							if imovel.Quartos > 0 {
-								<tr class="border-b border-slate-100">
-									<td class="py-2 text-slate-500">Quartos</td>
-									<td class="py-2 font-medium">{ fmt.Sprintf("%d", imovel.Quartos) }</td>
-								</tr>
-							}
-							if imovel.Banheiros > 0 {
-								<tr class="border-b border-slate-100">
-									<td class="py-2 text-slate-500">Banheiros</td>
-									<td class="py-2 font-medium">{ fmt.Sprintf("%d", imovel.Banheiros) }</td>
-								</tr>
-							}
-							if imovel.VagasGaragem > 0 {
-								<tr class="border-b border-slate-100">
-									<td class="py-2 text-slate-500">Vagas</td>
-									<td class="py-2 font-medium">{ fmt.Sprintf("%d", imovel.VagasGaragem) }</td>
-								</tr>
-							}
-						</tbody>
-					</table>
 				</div>
-				<div class="bg-slate-50 rounded-lg p-6 h-fit">
-					<p class="text-2xl font-bold text-primary mb-4">{ fmt.Sprintf("R$ %.0f", imovel.Preco) }</p>
-					if cfg.Whatsapp != "" {
-						<a
-							href={ templ.SafeURL("https://wa.me/" + cfg.Whatsapp) }
-							target="_blank"
-							class="block w-full bg-green-500 text-white text-center rounded px-4 py-3 font-medium hover:bg-green-600"
-						>
-							Contato via WhatsApp
-						</a>
-					}
-					if cfg.Telefone != "" {
-						<p class="text-center text-sm text-slate-600 mt-3">{ cfg.Telefone }</p>
-					}
+				<!-- Contact sidebar -->
+				<div>
+					<div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 sticky top-24">
+						if imovel.Finalidade == "aluguel" {
+							<p class="text-3xl font-bold text-teal-700 mb-1">
+								R$ { fmt.Sprintf("%.0f", imovel.Preco) }/mês
+							</p>
+						} else {
+							<p class="text-3xl font-bold text-teal-700 mb-1">
+								R$ { fmt.Sprintf("%.0f", imovel.Preco) }
+							</p>
+						}
+						if imovel.AreaM2 > 0 && imovel.Finalidade == "venda" {
+							<p class="text-sm text-gray-400 mb-6">
+								R$ { fmt.Sprintf("%.0f", imovel.Preco/imovel.AreaM2) }/m²
+							</p>
+						} else {
+							<div class="mb-6"></div>
+						}
+						<div class="space-y-3 mb-6">
+							if cfg.Whatsapp != "" {
+								<a
+									href={ templ.SafeURL("https://wa.me/" + cfg.Whatsapp + "?text=Olá! Tenho interesse no imóvel: " + imovel.Titulo) }
+									target="_blank"
+									class="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white py-3.5 rounded-xl font-semibold transition-colors text-sm"
+								>
+									💬 Chamar no WhatsApp
+								</a>
+							}
+							if cfg.Telefone != "" {
+								<a
+									href={ templ.SafeURL("tel:" + cfg.Telefone) }
+									class="flex items-center justify-center gap-2 w-full border border-gray-200 text-gray-700 hover:bg-gray-50 py-3.5 rounded-xl font-medium transition-colors text-sm"
+								>
+									📞 { cfg.Telefone }
+								</a>
+							}
+						</div>
+						<p class="text-xs text-gray-400 text-center">Atendimento seg–sáb das 9h às 18h</p>
+					</div>
 				</div>
 			</div>
-		</main>
+		</div>
 	}
 }

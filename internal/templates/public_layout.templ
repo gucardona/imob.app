@@ -9,33 +9,74 @@ templ PublicLayout(title string, cfg repo.Configuracao) {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ title } — { cfg.NomeImobiliaria }</title>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link
+				href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+				rel="stylesheet"
+			/>
 			<link rel="stylesheet" href="/static/css/output.css"/>
 		</head>
-		<body class="min-h-screen bg-white text-slate-900">
-			<header class="bg-primary text-white">
-				<div class="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
-					<a href="/" class="text-xl font-bold">{ cfg.NomeImobiliaria }</a>
-					<nav class="flex gap-6 text-sm">
-						<a href="/imoveis" class="hover:underline">Imóveis</a>
+		<body class="min-h-screen bg-gray-50 text-gray-900" style="font-family: 'Inter', system-ui, sans-serif;">
+			<header class="bg-white border-b border-gray-100 sticky top-0 z-40 shadow-sm">
+				<div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+					<a href="/" class="flex items-center gap-2.5">
+						<div class="w-9 h-9 rounded-xl bg-teal-600 flex-shrink-0 flex items-center justify-center">
+							<span class="text-white font-bold text-sm">P</span>
+						</div>
+						<span class="font-bold text-gray-900 text-lg">{ cfg.NomeImobiliaria }</span>
+					</a>
+					<nav class="flex items-center gap-6">
+						<a href="/imoveis" class="text-gray-600 hover:text-teal-600 text-sm font-medium transition-colors">Imóveis</a>
 						if cfg.Whatsapp != "" {
-							<a href={ templ.SafeURL("https://wa.me/" + cfg.Whatsapp) } target="_blank" class="hover:underline">WhatsApp</a>
+							<a
+								href={ templ.SafeURL("https://wa.me/" + cfg.Whatsapp) }
+								target="_blank"
+								class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+							>
+								Falar com Corretor
+							</a>
 						}
 					</nav>
 				</div>
 			</header>
 			{ children... }
-			<footer class="bg-slate-100 mt-16">
-				<div class="mx-auto max-w-5xl px-4 py-8 text-sm text-slate-600">
-					<p class="font-semibold">{ cfg.NomeImobiliaria }</p>
-					if cfg.Endereco != "" {
-						<p>{ cfg.Endereco }</p>
-					}
-					if cfg.Telefone != "" {
-						<p>Tel: { cfg.Telefone }</p>
-					}
-					if cfg.Email != "" {
-						<p><a href={ templ.SafeURL("mailto:" + cfg.Email) } class="hover:underline">{ cfg.Email }</a></p>
-					}
+			<footer class="bg-gray-900 text-gray-400 mt-20">
+				<div class="max-w-7xl mx-auto px-6 py-14 grid grid-cols-1 md:grid-cols-4 gap-10">
+					<div class="md:col-span-2">
+						<div class="flex items-center gap-2.5 mb-4">
+							<div class="w-9 h-9 rounded-xl bg-teal-600 flex-shrink-0 flex items-center justify-center">
+								<span class="text-white font-bold text-sm">P</span>
+							</div>
+							<span class="font-bold text-white text-lg">{ cfg.NomeImobiliaria }</span>
+						</div>
+						<p class="text-sm leading-relaxed text-gray-500 max-w-xs">
+							Encontramos o imóvel ideal para você com rapidez, segurança e transparência.
+						</p>
+					</div>
+					<div>
+						<p class="text-white font-semibold mb-4 text-sm">Contato</p>
+						if cfg.Telefone != "" {
+							<p class="text-sm mb-1">{ cfg.Telefone }</p>
+						}
+						if cfg.Email != "" {
+							<p class="text-sm mb-1">
+								<a href={ templ.SafeURL("mailto:" + cfg.Email) } class="hover:text-white transition-colors">{ cfg.Email }</a>
+							</p>
+						}
+						if cfg.Endereco != "" {
+							<p class="text-sm">{ cfg.Endereco }</p>
+						}
+					</div>
+					<div>
+						<p class="text-white font-semibold mb-4 text-sm">Imóveis</p>
+						<p class="text-sm mb-1"><a href="/imoveis?finalidade=venda" class="hover:text-white transition-colors">À Venda</a></p>
+						<p class="text-sm mb-1"><a href="/imoveis?finalidade=aluguel" class="hover:text-white transition-colors">Para Alugar</a></p>
+						<p class="text-sm"><a href="/imoveis?tipo=comercial" class="hover:text-white transition-colors">Comercial</a></p>
+					</div>
+				</div>
+				<div class="border-t border-gray-800 py-5 text-center text-xs text-gray-600">
+					© 2025 { cfg.NomeImobiliaria }. Todos os direitos reservados.
 				</div>
 			</footer>
 		</body>

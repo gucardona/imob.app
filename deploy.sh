@@ -13,6 +13,9 @@ $(go env GOPATH)/bin/templ generate
 echo "→ Building CSS..."
 ./tailwindcss -i "$CSS_IN" -o "$CSS_OUT" --minify
 
+echo "→ Building React frontend..."
+(cd frontend && npm run build)
+
 echo "→ Building..."
 go build -o "$BINARY" "$MAIN"
 

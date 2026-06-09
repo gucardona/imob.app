@@ -4,23 +4,121 @@ import "github.com/gucardona/imob.app/internal/repo"
 
 templ Home(destaques []repo.Imovel, thumbURLs map[int64]string, cfg repo.Configuracao) {
 	@PublicLayout("Início", cfg) {
-		<main class="mx-auto max-w-5xl px-4 py-12">
-			if cfg.TextoHome != "" {
-				<p class="text-lg text-slate-700 mb-10">{ cfg.TextoHome }</p>
-			}
-			if len(destaques) > 0 {
-				<h2 class="text-2xl font-bold mb-6">Imóveis em Destaque</h2>
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+		<!-- Hero -->
+		<section class="bg-gradient-to-br from-teal-600 via-teal-700 to-teal-900 text-white py-24">
+			<div class="max-w-4xl mx-auto px-6 text-center">
+				<h1 class="text-4xl md:text-6xl font-bold mb-4 leading-tight">
+					Encontre seu próximo
+					<br/>
+					<span class="text-teal-200">lar ideal</span>
+				</h1>
+				if cfg.TextoHome != "" {
+					<p class="text-teal-100 text-lg mb-12">{ cfg.TextoHome }</p>
+				} else {
+					<p class="text-teal-100 text-lg mb-12">Imóveis selecionados para realizar o seu sonho.</p>
+				}
+				<form method="GET" action="/imoveis" class="bg-white rounded-2xl p-2 flex flex-wrap gap-2 shadow-2xl max-w-3xl mx-auto">
+					<select
+						name="finalidade"
+						class="flex-1 min-w-[130px] px-4 py-3 text-gray-700 text-sm rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-200"
+					>
+						<option value="">Finalidade</option>
+						<option value="venda">Venda</option>
+						<option value="aluguel">Aluguel</option>
+					</select>
+					<select
+						name="tipo"
+						class="flex-1 min-w-[130px] px-4 py-3 text-gray-700 text-sm rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-200"
+					>
+						<option value="">Tipo</option>
+						<option value="casa">Casa</option>
+						<option value="apartamento">Apartamento</option>
+						<option value="terreno">Terreno</option>
+						<option value="comercial">Comercial</option>
+						<option value="rural">Rural</option>
+					</select>
+					<input
+						type="text"
+						name="cidade"
+						placeholder="Cidade ou bairro..."
+						class="flex-1 min-w-[160px] px-4 py-3 text-gray-700 text-sm rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-200"
+					/>
+					<button
+						type="submit"
+						class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-colors whitespace-nowrap"
+					>
+						Buscar →
+					</button>
+				</form>
+			</div>
+		</section>
+		<!-- Stats strip -->
+		<div class="bg-white border-b border-gray-100 shadow-sm">
+			<div class="max-w-5xl mx-auto px-6 py-5 flex justify-center gap-16 text-center">
+				<div>
+					<p class="text-teal-700 font-bold text-2xl">500+</p>
+					<p class="text-gray-700 text-xs font-medium">Imóveis</p>
+					<p class="text-gray-400 text-xs">disponíveis</p>
+				</div>
+				<div>
+					<p class="text-teal-700 font-bold text-2xl">10+</p>
+					<p class="text-gray-700 text-xs font-medium">Anos</p>
+					<p class="text-gray-400 text-xs">de experiência</p>
+				</div>
+				<div>
+					<p class="text-teal-700 font-bold text-2xl">98%</p>
+					<p class="text-gray-700 text-xs font-medium">Satisfação</p>
+					<p class="text-gray-400 text-xs">dos clientes</p>
+				</div>
+			</div>
+		</div>
+		<!-- Destaques -->
+		if len(destaques) > 0 {
+			<section class="max-w-7xl mx-auto px-6 py-16">
+				<div class="flex items-center justify-between mb-8">
+					<div>
+						<h2 class="text-2xl font-bold text-gray-900">Imóveis em Destaque</h2>
+						<p class="text-gray-500 text-sm mt-1">Selecionados especialmente para você</p>
+					</div>
+					<a href="/imoveis" class="text-teal-600 hover:text-teal-700 text-sm font-semibold">Ver todos →</a>
+				</div>
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					for _, im := range destaques {
 						@ImovelCard(im, thumbURLs[im.ID])
 					}
 				</div>
-			} else {
-				<p class="text-slate-600">
+			</section>
+		} else {
+			<section class="max-w-7xl mx-auto px-6 py-16 text-center">
+				<p class="text-gray-500">
 					Nenhum imóvel em destaque.
-					<a href="/imoveis" class="text-primary underline">Ver todos os imóveis</a>.
+					<a href="/imoveis" class="text-teal-600 hover:underline">Ver todos os imóveis</a>.
 				</p>
-			}
-		</main>
+			</section>
+		}
+		<!-- Why us -->
+		<section class="bg-white py-20">
+			<div class="max-w-5xl mx-auto px-6 text-center">
+				<h2 class="text-2xl font-bold text-gray-900 mb-3">Por que escolher a { cfg.NomeImobiliaria }?</h2>
+				<p class="text-gray-500 mb-12">Sua confiança é nossa maior conquista</p>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<div class="p-8 rounded-2xl bg-gray-50 text-left hover:bg-teal-50 transition-colors">
+						<p class="text-3xl mb-4">🏆</p>
+						<h3 class="font-semibold text-gray-900 mb-2">Expertise</h3>
+						<p class="text-gray-500 text-sm leading-relaxed">Mais de 10 anos de experiência no mercado imobiliário regional.</p>
+					</div>
+					<div class="p-8 rounded-2xl bg-gray-50 text-left hover:bg-teal-50 transition-colors">
+						<p class="text-3xl mb-4">🤝</p>
+						<h3 class="font-semibold text-gray-900 mb-2">Atendimento</h3>
+						<p class="text-gray-500 text-sm leading-relaxed">Corretores dedicados para encontrar o imóvel certo para você.</p>
+					</div>
+					<div class="p-8 rounded-2xl bg-gray-50 text-left hover:bg-teal-50 transition-colors">
+						<p class="text-3xl mb-4">🔒</p>
+						<h3 class="font-semibold text-gray-900 mb-2">Segurança</h3>
+						<p class="text-gray-500 text-sm leading-relaxed">Toda documentação verificada e processo 100% transparente.</p>
+					</div>
+				</div>
+			</div>
+		</section>
 	}
 }

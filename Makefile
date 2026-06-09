@@ -9,6 +9,7 @@ generate:
 	$(TAILWIND) -i $(CSS_IN) -o $(CSS_OUT) --minify
 
 build: generate
+	cd frontend && npm run build
 	go build -o imob-app ./cmd/imob-app
 
 test: generate

@@ -6,3 +6,6 @@
 /tailwindcss
 /internal/assets/static/css/output.css
 /internal/templates/*_templ.go
+/internal/frontend/dist/*
+!/internal/frontend/dist/.gitkeep
+/frontend/node_modules/
