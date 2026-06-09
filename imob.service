@@ -1,0 +1,17 @@
+[Unit]
+Description=imob.gupa.dev
+After=network.target
+
+[Service]
+User=YOUR_USER
+WorkingDirectory=/path/to/imob.app
+ExecStart=/path/to/imob.app/imob-app
+Restart=always
+EnvironmentFile=/etc/imob/env
+Environment=PORT=8004
+Environment=UPLOADS_DIR=/path/to/imob.app/uploads
+Environment=DATABASE_PATH=/path/to/imob.app/imob.db
+Environment=SECURE_COOKIES=true
+
+[Install]
+WantedBy=multi-user.target
