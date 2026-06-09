@@ -48,7 +48,7 @@ export function darkenHex(hex, pct) {
 }
 
 export function setTheme(cfg) {
-  const brand = cfg?.CorPrimaria || '#FF5A5F'
+  const brand = cfg?.CorPrimaria || '#8b1a1a'
   document.documentElement.style.setProperty('--color-brand', brand)
   document.documentElement.style.setProperty('--color-brand-dark', darkenHex(brand, 12))
 }
