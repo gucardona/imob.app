@@ -11,15 +11,14 @@ type contextKey string
 
 const adminIDContextKey contextKey = "adminID"
 
-// RequireAuth verifies the session cookie, redirecting to the login page when
-// absent or invalid, renews the session on every authenticated request (per
-// spec's "renovação por atividade"), and stores the admin id in the request context.
 func RequireAuth(sessions auth.SessionManager) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			adminID, ok := sessions.Verify(r)
 			if !ok {
-				http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
 				return
 			}
 
