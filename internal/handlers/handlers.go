@@ -69,10 +69,12 @@ func NewRouter(deps Deps) http.Handler {
 	mux.Handle("GET /admin/configuracao", requireAuth(http.HandlerFunc(cfgHandlers.showForm)))
 	mux.Handle("POST /admin/configuracao", requireAuth(http.HandlerFunc(cfgHandlers.update)))
 
-	// /login shortcut → admin login
-	mux.HandleFunc("GET /login", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/admin/login", http.StatusMovedPermanently)
-	})
+	// /admin and /login shortcuts → admin login
+	adminRedirect := func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/admin/login", http.StatusFound)
+	}
+	mux.HandleFunc("GET /admin", adminRedirect)
+	mux.HandleFunc("GET /login", adminRedirect)
 
 	// React SPA — catch-all for public routes
 	distFS, _ := fs.Sub(frontend.Dist, "dist")
