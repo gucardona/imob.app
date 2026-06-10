@@ -56,7 +56,7 @@ func (h adminAPIHandlers) me(w http.ResponseWriter, r *http.Request) {
 	adminID, _ := r.Context().Value(adminIDContextKey).(int64)
 	admin, err := h.admins.FindByID(r.Context(), adminID)
 	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		writeJSONError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	writeJSON(w, map[string]string{"email": admin.Email})
@@ -68,7 +68,7 @@ func (h adminAPIHandlers) login(w http.ResponseWriter, r *http.Request) {
 		Senha string `json:"senha"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		writeJSONError(w, "invalid body", http.StatusBadRequest)
 		return
 	}
 
@@ -120,7 +120,7 @@ type adminImovelResp struct {
 func (h adminAPIHandlers) imovelList(w http.ResponseWriter, r *http.Request) {
 	list, err := h.imoveis.List(r.Context())
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {
@@ -132,16 +132,16 @@ func (h adminAPIHandlers) imovelList(w http.ResponseWriter, r *http.Request) {
 func (h adminAPIHandlers) imovelGet(w http.ResponseWriter, r *http.Request) {
 	id, err := parseIDPathValue(r, "id")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	imovel, err := h.imoveis.Get(r.Context(), id)
 	if errors.Is(err, repo.ErrNotFound) {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	fotos, err := h.fotos.ListByImovel(r.Context(), id)
@@ -154,7 +154,7 @@ func (h adminAPIHandlers) imovelGet(w http.ResponseWriter, r *http.Request) {
 func (h adminAPIHandlers) imovelCreate(w http.ResponseWriter, r *http.Request) {
 	var body imovelBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		writeJSONError(w, "invalid body", http.StatusBadRequest)
 		return
 	}
 	imovel := repo.Imovel{
@@ -166,23 +166,24 @@ func (h adminAPIHandlers) imovelCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	id, err := h.imoveis.Create(r.Context(), imovel)
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	imovel.ID = id
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	writeJSON(w, imovel)
+	json.NewEncoder(w).Encode(imovel)
 }
 
 func (h adminAPIHandlers) imovelUpdate(w http.ResponseWriter, r *http.Request) {
 	id, err := parseIDPathValue(r, "id")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	var body imovelBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		writeJSONError(w, "invalid body", http.StatusBadRequest)
 		return
 	}
 	imovel := repo.Imovel{
@@ -194,7 +195,7 @@ func (h adminAPIHandlers) imovelUpdate(w http.ResponseWriter, r *http.Request) {
 		Status:       body.Status, Destaque: body.Destaque,
 	}
 	if err := h.imoveis.Update(r.Context(), imovel); err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	writeJSON(w, imovel)
@@ -203,11 +204,11 @@ func (h adminAPIHandlers) imovelUpdate(w http.ResponseWriter, r *http.Request) {
 func (h adminAPIHandlers) imovelDelete(w http.ResponseWriter, r *http.Request) {
 	id, err := parseIDPathValue(r, "id")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	if err := h.imoveis.Delete(r.Context(), id); err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	_ = os.RemoveAll(filepath.Join(h.uploadsDir, strconv.FormatInt(id, 10)))
@@ -217,20 +218,20 @@ func (h adminAPIHandlers) imovelDelete(w http.ResponseWriter, r *http.Request) {
 func (h adminAPIHandlers) imovelToggleDestaque(w http.ResponseWriter, r *http.Request) {
 	id, err := parseIDPathValue(r, "id")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	imovel, err := h.imoveis.Get(r.Context(), id)
 	if errors.Is(err, repo.ErrNotFound) {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	if err := h.imoveis.SetDestaque(r.Context(), id, !imovel.Destaque); err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	imovel.Destaque = !imovel.Destaque
@@ -242,21 +243,21 @@ func (h adminAPIHandlers) imovelToggleDestaque(w http.ResponseWriter, r *http.Re
 func (h adminAPIHandlers) fotoUpload(w http.ResponseWriter, r *http.Request) {
 	imovelID, err := parseIDPathValue(r, "id")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	if _, err := h.imoveis.Get(r.Context(), imovelID); err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
-		http.Error(w, `{"error":"files too large"}`, http.StatusBadRequest)
+		writeJSONError(w, "files too large", http.StatusBadRequest)
 		return
 	}
 	files := r.MultipartForm.File["fotos"]
 	existing, err := h.fotos.ListByImovel(r.Context(), imovelID)
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	nextOrdem := len(existing)
@@ -265,20 +266,20 @@ func (h adminAPIHandlers) fotoUpload(w http.ResponseWriter, r *http.Request) {
 	for i, header := range files {
 		file, err := header.Open()
 		if err != nil {
-			http.Error(w, `{"error":"bad file"}`, http.StatusBadRequest)
+			writeJSONError(w, "bad file", http.StatusBadRequest)
 			return
 		}
 		data := make([]byte, header.Size)
 		_, err = io.ReadFull(file, data)
 		file.Close()
 		if err != nil {
-			http.Error(w, `{"error":"bad file"}`, http.StatusBadRequest)
+			writeJSONError(w, "bad file", http.StatusBadRequest)
 			return
 		}
 		baseName := fmt.Sprintf("foto-%d-%d", nextOrdem+i+1, time.Now().UnixNano())
 		paths, err := images.SaveVariants(data, destDir, baseName)
 		if err != nil {
-			http.Error(w, `{"error":"bad image"}`, http.StatusBadRequest)
+			writeJSONError(w, "bad image", http.StatusBadRequest)
 			return
 		}
 		relDir := strconv.FormatInt(imovelID, 10)
@@ -290,7 +291,7 @@ func (h adminAPIHandlers) fotoUpload(w http.ResponseWriter, r *http.Request) {
 			Ordem:           nextOrdem + i,
 		})
 		if err != nil {
-			http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+			writeJSONError(w, "internal", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -300,16 +301,16 @@ func (h adminAPIHandlers) fotoUpload(w http.ResponseWriter, r *http.Request) {
 func (h adminAPIHandlers) fotoPrincipal(w http.ResponseWriter, r *http.Request) {
 	imovelID, err := parseIDPathValue(r, "id")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	fotoID, err := parseIDPathValue(r, "fotoID")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	if err := h.fotos.SetPrincipal(r.Context(), imovelID, fotoID); err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	h.writeFotosJSON(w, r, imovelID)
@@ -318,21 +319,21 @@ func (h adminAPIHandlers) fotoPrincipal(w http.ResponseWriter, r *http.Request) 
 func (h adminAPIHandlers) fotoDelete(w http.ResponseWriter, r *http.Request) {
 	imovelID, err := parseIDPathValue(r, "id")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	fotoID, err := parseIDPathValue(r, "fotoID")
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	foto, err := h.fotos.GetByID(r.Context(), imovelID, fotoID)
 	if err != nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
 	if err := h.fotos.Delete(r.Context(), imovelID, fotoID); err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	for _, rel := range []string{foto.CaminhoOriginal, foto.CaminhoThumb, foto.CaminhoGrande} {
@@ -344,7 +345,7 @@ func (h adminAPIHandlers) fotoDelete(w http.ResponseWriter, r *http.Request) {
 func (h adminAPIHandlers) writeFotosJSON(w http.ResponseWriter, r *http.Request, imovelID int64) {
 	fotos, err := h.fotos.ListByImovel(r.Context(), imovelID)
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	if fotos == nil {
@@ -362,7 +363,7 @@ func (h adminAPIHandlers) configGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	writeJSON(w, cfg)
@@ -372,13 +373,13 @@ func (h adminAPIHandlers) configUpdate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	existing, err := h.cfg.Get(ctx)
 	if err != nil && !errors.Is(err, repo.ErrNotFound) {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 11<<20)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		if err2 := r.ParseForm(); err2 != nil {
-			http.Error(w, `{"error":"invalid form"}`, http.StatusBadRequest)
+			writeJSONError(w, "invalid form", http.StatusBadRequest)
 			return
 		}
 	}
@@ -401,18 +402,18 @@ func (h adminAPIHandlers) configUpdate(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 		data, err := io.ReadAll(file)
 		if err != nil {
-			http.Error(w, `{"error":"bad logo"}`, http.StatusBadRequest)
+			writeJSONError(w, "bad logo", http.StatusBadRequest)
 			return
 		}
 		logoPath, err := saveLogo(h.uploadsDir, data)
 		if err != nil {
-			http.Error(w, `{"error":"bad logo"}`, http.StatusInternalServerError)
+			writeJSONError(w, "bad logo", http.StatusInternalServerError)
 			return
 		}
 		cfg.LogoPath = logoPath
 	}
 	if err := h.cfg.Update(ctx, cfg); err != nil {
-		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
 	writeJSON(w, cfg)

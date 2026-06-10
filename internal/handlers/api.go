@@ -23,6 +23,12 @@ func writeJSON(w http.ResponseWriter, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+func writeJSONError(w http.ResponseWriter, msg string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_, _ = w.Write([]byte(`{"error":"` + msg + `"}`))
+}
+
 func (h *apiHandlers) configuracao(w http.ResponseWriter, r *http.Request) {
 	cfg, err := h.cfg.Get(r.Context())
 	if errors.Is(err, repo.ErrNotFound) {
