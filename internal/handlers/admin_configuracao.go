@@ -60,6 +60,7 @@ func (h configHandlers) update(w http.ResponseWriter, r *http.Request) {
 		InstagramURL:    r.FormValue("instagram_url"),
 		TextoSobre:      r.FormValue("texto_sobre"),
 		TextoHome:       r.FormValue("texto_home"),
+		HeroImageURL:    r.FormValue("hero_image_url"),
 		LogoPath:        existing.LogoPath,
 	}
 
