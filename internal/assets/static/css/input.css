@@ -3,7 +3,32 @@
 @source "../../templates";
 
 @theme {
-  --color-primary: #0D9488;
-  --color-primary-dark: #0F766E;
+  --color-brand-50:  #fdf3f3;
+  --color-brand-100: #fbe8e8;
+  --color-brand-200: #f5d0d0;
+  --color-brand-300: #ecadad;
+  --color-brand-400: #df7c7c;
+  --color-brand-500: #cf5151;
+  --color-brand-600: #b93535;
+  --color-brand-700: #9b2424;
+  --color-brand-800: #8b1a1a;
+  --color-brand-900: #6e1515;
+  --color-brand-950: #420c0c;
+
+  --color-gold-400: #e2b84a;
+  --color-gold-500: #c49a3c;
+  --color-gold-600: #a67d2e;
+
+  --color-warm-50:  #faf8f6;
+  --color-warm-100: #f5f1ec;
+  --color-warm-200: #e8e1d8;
+  --color-warm-300: #d4cab8;
+  --color-warm-400: #b0a08a;
+  --color-warm-500: #8c7a62;
+  --color-warm-600: #6e5f4b;
+  --color-warm-700: #4f4236;
+  --color-warm-800: #2e2520;
+  --color-warm-900: #1a150f;
+
   --font-sans: 'Inter', system-ui, sans-serif;
 }

@@ -48,7 +48,11 @@ export function darkenHex(hex, pct) {
 }
 
 export function setTheme(cfg) {
-  const brand = cfg?.CorPrimaria || '#8b1a1a'
+  const brand = cfg?.CorPrimaria || '#8B1538'
   document.documentElement.style.setProperty('--color-brand', brand)
   document.documentElement.style.setProperty('--color-brand-dark', darkenHex(brand, 12))
+  const r = parseInt(brand.slice(1, 3), 16)
+  const g = parseInt(brand.slice(3, 5), 16)
+  const b = parseInt(brand.slice(5, 7), 16)
+  document.documentElement.style.setProperty('--color-brand-light', `rgba(${r}, ${g}, ${b}, 0.1)`)
 }

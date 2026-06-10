@@ -1,14 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --color-brand: #8b1a1a;
-  --color-brand-dark: #6e1515;
-  --color-brand-light: #fbe8e8;
+  --crimson: #8B1538;
+  --charcoal: #1A1A1A;
+  --gray-light: #F5F5F5;
+  --color-brand: #8B1538;
+  --color-brand-dark: #6D112B;
+  --color-brand-light: rgba(139, 21, 56, 0.1);
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #faf8f6; }
+
+body {
+  font-family: 'General Sans', system-ui, sans-serif;
+  background-color: #fff;
+  color: #1A1A1A;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+.custom-shadow {
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+
+.hero-gradient {
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%);
+}
+
+.property-card:hover .property-img {
+  transform: scale(1.05);
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #F5F5F5; }
+::-webkit-scrollbar-thumb { background: #D1D1D1; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #8B1538; }

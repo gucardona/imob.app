@@ -4,227 +4,203 @@ import { getImoveis } from '../api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import Card from '../components/Card'
-import FilterPills from '../components/FilterPills'
+
+const HERO_DEFAULT = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070&auto=format&fit=crop'
 
 function Skeleton() {
   return (
-    <div className="bg-white rounded-xl overflow-hidden border border-warm-200 animate-pulse">
-      <div className="h-52 bg-warm-100" />
-      <div className="p-5 space-y-2">
-        <div className="h-2.5 bg-warm-100 rounded w-1/2" />
-        <div className="h-4 bg-warm-100 rounded w-3/4" />
-        <div className="h-2.5 bg-warm-100 rounded w-1/3" />
+    <div className="animate-pulse">
+      <div className="aspect-[4/3] bg-gray-100 rounded-2xl mb-6" />
+      <div className="space-y-3">
+        <div className="h-5 bg-gray-100 rounded w-3/4" />
+        <div className="h-3 bg-gray-100 rounded w-1/2" />
+        <div className="h-3 bg-gray-100 rounded w-2/3" />
       </div>
     </div>
   )
 }
 
-function IconTrophy() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/>
-      <path d="M4 22h16"/>
-      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
-      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
-      <path d="M18 2H6v7a6 6 0 0012 0V2z"/>
-    </svg>
-  )
-}
-
-function IconUsers() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-      <circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-      <path d="M16 3.13a4 4 0 010 7.75"/>
-    </svg>
-  )
-}
-
-function IconShield() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-    </svg>
-  )
-}
-
-const WHY_US = [
-  { Icon: IconTrophy, title: 'Expertise', desc: 'Mais de 10 anos de experiência no mercado imobiliário regional.' },
-  { Icon: IconUsers, title: 'Atendimento', desc: 'Corretores dedicados para encontrar o imóvel certo para você.' },
-  { Icon: IconShield, title: 'Segurança', desc: 'Toda documentação verificada e processo 100% transparente.' },
-]
-
 export default function Home({ cfg }) {
   const [imoveis, setImoveis] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState({ finalidade: '', tipo: '' })
-  const [searchCity, setSearchCity] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [tipo, setTipo] = useState('')
+  const [finalidade, setFinalidade] = useState('')
   const navigate = useNavigate()
 
-  const hasFilter = !!(filters.finalidade || filters.tipo)
+  const heroImage = cfg?.HeroImageURL || HERO_DEFAULT
+  const wa = cfg?.Whatsapp
+  const tel = cfg?.Telefone
+  const waText = encodeURIComponent('Olá! Gostaria de mais informações sobre os imóveis.')
 
   useEffect(() => {
-    setLoading(true)
-    const params = hasFilter ? { ...filters } : { destaque: true }
-    getImoveis(params).then((data) => {
+    getImoveis({ destaque: true }).then(data => {
       setImoveis(data || [])
       setLoading(false)
     })
-  }, [filters.finalidade, filters.tipo])
+  }, [])
 
   function handleSearch(e) {
     e.preventDefault()
     const params = new URLSearchParams()
-    if (filters.finalidade) params.set('finalidade', filters.finalidade)
-    if (filters.tipo) params.set('tipo', filters.tipo)
-    if (searchCity.trim()) params.set('cidade', searchCity.trim())
+    if (cidade.trim()) params.set('cidade', cidade.trim())
+    if (tipo) params.set('tipo', tipo)
+    if (finalidade) params.set('finalidade', finalidade)
     navigate(`/imoveis?${params}`)
   }
 
-  const nome = cfg?.NomeImobiliaria || ''
-  const gridTitle = hasFilter
-    ? `${loading ? '…' : imoveis.length} imóvel(eis) encontrado(s)`
-    : 'Imóveis em Destaque'
-
   return (
-    <div className="min-h-screen bg-warm-50">
+    <div className="min-h-screen flex flex-col">
       <Header cfg={cfg} />
 
-      {/* Hero */}
-      <section
-        className="text-white py-24"
-        style={{ background: 'linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-dark) 60%, #1a150f 100%)' }}
-      >
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <p
-            className="text-xs font-semibold uppercase tracking-widest mb-4"
-            style={{ color: 'rgba(255,255,255,0.5)' }}
+      <main className="flex-1 pt-20">
+        {/* HERO */}
+        <section className="relative h-[75vh] w-full overflow-hidden">
+          <img
+            src={heroImage}
+            alt="Imóvel de luxo"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 hero-gradient" />
+          <div className="absolute bottom-24 left-8 lg:left-16 max-w-2xl">
+            <span className="inline-block px-3 py-1 bg-white/10 backdrop-blur-md text-white text-[10px] uppercase tracking-[0.2em] font-bold mb-6 border border-white/20">
+              Coleção Exclusiva
+            </span>
+            <h1 className="text-5xl lg:text-7xl font-bold text-white tracking-tighter leading-[0.9] mb-4">
+              Espaços extraordinários para uma vida bem vivida.
+            </h1>
+          </div>
+        </section>
+
+        {/* SEARCH BAR */}
+        <div className="max-w-6xl mx-auto px-8 lg:px-0 relative z-10 -mt-12">
+          <form
+            onSubmit={handleSearch}
+            className="bg-white rounded-2xl p-4 custom-shadow border border-gray-100 flex flex-col md:flex-row items-center gap-4"
           >
-            Imobiliária de Confiança
-          </p>
-          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-tight tracking-tight">
-            Encontre seu próximo<br />
-            <span className="text-gold-400">lar ideal</span>
-          </h1>
-          <p className="text-white/60 text-base mb-12 max-w-lg mx-auto leading-relaxed">
-            {cfg?.TextoHome || 'Imóveis selecionados com excelência para realizar o seu sonho.'}
-          </p>
-          <form onSubmit={handleSearch} className="bg-white rounded-xl p-2 flex flex-wrap gap-2 shadow-2xl max-w-3xl mx-auto">
-            <select
-              value={filters.finalidade}
-              onChange={(e) => setFilters(f => ({ ...f, finalidade: e.target.value }))}
-              className="flex-1 min-w-[130px] px-4 py-3 text-warm-700 text-sm rounded-lg bg-warm-50 focus:outline-none border-0"
-            >
-              <option value="">Finalidade</option>
-              <option value="venda">Venda</option>
-              <option value="aluguel">Aluguel</option>
-            </select>
-            <select
-              value={filters.tipo}
-              onChange={(e) => setFilters(f => ({ ...f, tipo: e.target.value }))}
-              className="flex-1 min-w-[130px] px-4 py-3 text-warm-700 text-sm rounded-lg bg-warm-50 focus:outline-none border-0"
-            >
-              <option value="">Tipo</option>
-              <option value="casa">Casa</option>
-              <option value="apartamento">Apartamento</option>
-              <option value="terreno">Terreno</option>
-              <option value="comercial">Comercial</option>
-              <option value="rural">Rural</option>
-            </select>
-            <input
-              type="text"
-              placeholder="Cidade ou bairro..."
-              value={searchCity}
-              onChange={(e) => setSearchCity(e.target.value)}
-              className="flex-1 min-w-[160px] px-4 py-3 text-warm-700 text-sm rounded-lg bg-warm-50 focus:outline-none border-0"
-            />
+            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+              <div className="px-6 py-2">
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Localização</label>
+                <input
+                  type="text"
+                  placeholder="Cidade ou bairro"
+                  value={cidade}
+                  onChange={e => setCidade(e.target.value)}
+                  className="w-full text-sm font-medium focus:outline-none placeholder-gray-300"
+                />
+              </div>
+              <div className="px-6 py-2">
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Tipo de Imóvel</label>
+                <select
+                  value={tipo}
+                  onChange={e => setTipo(e.target.value)}
+                  className="w-full text-sm font-medium focus:outline-none bg-transparent cursor-pointer"
+                >
+                  <option value="">Todos os tipos</option>
+                  <option value="casa">Casa</option>
+                  <option value="apartamento">Apartamento</option>
+                  <option value="terreno">Terreno</option>
+                  <option value="comercial">Comercial</option>
+                  <option value="rural">Rural</option>
+                </select>
+              </div>
+              <div className="px-6 py-2">
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Finalidade</label>
+                <select
+                  value={finalidade}
+                  onChange={e => setFinalidade(e.target.value)}
+                  className="w-full text-sm font-medium focus:outline-none bg-transparent cursor-pointer"
+                >
+                  <option value="">Venda e Aluguel</option>
+                  <option value="venda">Venda</option>
+                  <option value="aluguel">Aluguel</option>
+                </select>
+              </div>
+            </div>
             <button
               type="submit"
-              className="px-7 py-3 rounded-lg text-sm font-semibold text-white tracking-wide hover:opacity-90 transition-opacity whitespace-nowrap"
-              style={{ background: 'var(--color-brand)' }}
+              className="w-full md:w-auto bg-[#8B1538] hover:bg-[#6D112B] text-white px-10 py-5 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
             >
-              Buscar
+              <iconify-icon icon="lucide:sliders-horizontal" className="text-lg"></iconify-icon>
+              Ver Imóveis
             </button>
           </form>
         </div>
-      </section>
 
-      {/* Pill filters */}
-      <FilterPills filters={filters} onChange={(key, val) => setFilters(f => ({ ...f, [key]: val }))} />
-
-      {/* Card grid */}
-      <section className="max-w-7xl mx-auto px-6 py-16">
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-brand)' }}>
-              Selecionados para você
-            </p>
-            <h2 className="text-2xl font-bold text-warm-900 tracking-tight">{gridTitle}</h2>
+        {/* PROPERTY SHOWCASE */}
+        <section className="max-w-7xl mx-auto px-8 lg:px-16 py-32">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+            <div>
+              <h2 className="text-4xl font-bold tracking-tight mb-4">Imóveis Selecionados</h2>
+              <p className="text-gray-500 max-w-md">
+                Imóveis cuidadosamente selecionados em localizações privilegiadas para você.
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <button className="px-6 py-3 bg-[#F5F5F5] rounded-full text-sm font-bold hover:bg-gray-200 transition-colors">
+                Destaques
+              </button>
+              <a href="/imoveis" className="px-6 py-3 text-sm font-bold text-[#8B1538] hover:underline">
+                Ver Todos
+              </a>
+            </div>
           </div>
-          {!hasFilter && (
-            <a
-              href="/imoveis"
-              className="text-sm font-semibold flex items-center gap-1.5 hover:opacity-75 transition-opacity"
-              style={{ color: 'var(--color-brand)' }}
-            >
-              Ver todos
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </a>
+
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+              {[1, 2, 3].map(i => <Skeleton key={i} />)}
+            </div>
+          ) : imoveis.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+              {imoveis.map(im => <Card key={im.ID} imovel={im} />)}
+            </div>
+          ) : (
+            <div className="text-center py-20 text-gray-400">
+              <iconify-icon icon="lucide:building-2" className="text-5xl mb-4 mx-auto block"></iconify-icon>
+              <p className="text-sm mb-4">Nenhum imóvel em destaque no momento.</p>
+              <a href="/imoveis" className="text-sm font-bold text-[#8B1538] hover:underline">
+                Ver todos os imóveis
+              </a>
+            </div>
           )}
-        </div>
+        </section>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} />)}
-          </div>
-        ) : imoveis.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {imoveis.map((im) => <Card key={im.ID} imovel={im} />)}
-          </div>
-        ) : (
-          <div className="text-center py-20 text-warm-400">
-            <svg className="w-12 h-12 mx-auto mb-4 text-warm-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-              <polyline strokeLinecap="round" strokeLinejoin="round" points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            <p className="text-sm">Nenhum imóvel encontrado.</p>
-          </div>
-        )}
-      </section>
-
-      {/* Why us */}
-      <section className="bg-white py-20 border-t border-warm-100">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--color-brand)' }}>
-            Nossa proposta
-          </p>
-          <h2 className="text-2xl font-bold text-warm-900 mb-3 tracking-tight">
-            Por que escolher{nome ? ` a ${nome}` : ' a gente'}?
-          </h2>
-          <p className="text-warm-400 text-sm mb-14">Sua confiança é nossa maior conquista</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {WHY_US.map(({ Icon, title, desc }) => (
-              <div
-                key={title}
-                className="p-8 rounded-xl bg-warm-50 border border-warm-100 text-left hover:border-warm-200 transition-colors"
-              >
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center mb-5"
-                  style={{ background: 'var(--color-brand-light, #fbe8e8)', color: 'var(--color-brand)' }}
+        {/* CTA SECTION */}
+        <section className="px-8 lg:px-16 pb-32">
+          <div className="bg-[#8B1538] rounded-3xl p-16 flex flex-col items-center text-center overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+            <h2 className="text-4xl lg:text-5xl font-bold text-white mb-8 max-w-2xl leading-tight relative z-10">
+              Sua jornada para o lar perfeito começa com uma conversa.
+            </h2>
+            <div className="flex flex-col sm:flex-row gap-4 relative z-10">
+              {wa ? (
+                <a
+                  href={`https://wa.me/${wa.replace(/\D/g, '')}?text=${waText}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-10 py-5 bg-white text-[#8B1538] font-bold rounded-xl hover:bg-gray-100 transition-all"
                 >
-                  <Icon />
-                </div>
-                <h3 className="font-semibold text-warm-900 mb-2 tracking-tight">{title}</h3>
-                <p className="text-warm-500 text-sm leading-relaxed">{desc}</p>
-              </div>
-            ))}
+                  Falar com Corretor
+                </a>
+              ) : tel ? (
+                <a
+                  href={`tel:${tel}`}
+                  className="px-10 py-5 bg-white text-[#8B1538] font-bold rounded-xl hover:bg-gray-100 transition-all"
+                >
+                  {tel}
+                </a>
+              ) : null}
+              <a
+                href="/imoveis"
+                className="px-10 py-5 border border-white text-white font-bold rounded-xl hover:bg-white/10 transition-all"
+              >
+                Ver Todos os Imóveis
+              </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
       <Footer cfg={cfg} />
     </div>
