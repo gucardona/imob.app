@@ -5,7 +5,6 @@ CSS_IN := internal/assets/static/css/input.css
 CSS_OUT := internal/assets/static/css/output.css
 
 generate:
-	templ generate
 	$(TAILWIND) -i $(CSS_IN) -o $(CSS_OUT) --minify
 
 build: generate
