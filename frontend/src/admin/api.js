@@ -1,7 +1,7 @@
 async function apiFetch(path, options = {}) {
   const res = await fetch(path, options)
   if (!res.ok) {
-    if (res.status === 401 && path !== '/api/admin/login') {
+    if (res.status === 401 && path !== '/api/admin/login' && path !== '/api/admin/me') {
       window.location.replace('/admin/login')
       return
     }
