@@ -1,6 +1,10 @@
 async function apiFetch(path, options = {}) {
   const res = await fetch(path, options)
   if (!res.ok) {
+    if (res.status === 401 && path !== '/api/admin/login') {
+      window.location.replace('/admin/login')
+      return
+    }
     const err = new Error(`${res.status}`)
     err.status = res.status
     throw err

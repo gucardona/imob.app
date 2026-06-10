@@ -1,23 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login } from '../api.js'
+import { login, getMe } from '../api.js'
 import { useAuth } from '../AuthContext.jsx'
 
 export default function Login() {
-  const { setAdmin } = useAuth()
+  const { admin, setAdmin } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    if (admin) navigate('/admin/imoveis', { replace: true })
+  }, [admin, navigate])
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const data = await login(email, senha)
-      setAdmin(data)
+      await login(email, senha)
+      const me = await getMe()
+      setAdmin(me)
       navigate('/admin/imoveis', { replace: true })
     } catch (err) {
       setError(err.status === 401 ? 'Credenciais inválidas.' : 'Erro ao fazer login.')
@@ -25,6 +30,8 @@ export default function Login() {
       setLoading(false)
     }
   }
+
+  if (admin === undefined) return null
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
