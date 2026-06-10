@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
@@ -12,10 +13,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -63,33 +61,33 @@ func TestRouter_Healthz_ReturnsOK(t *testing.T) {
 	}
 }
 
-func TestRouter_Home_RendersPage(t *testing.T) {
+func TestRouter_AdminMe_RequiresAuth(t *testing.T) {
 	router := newTestRouter(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/me", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", rec.Code)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "Imóveis") {
-		t.Errorf("expected body to contain nav link 'Imóveis', got: %s", rec.Body.String())
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("expected JSON content-type, got %q", ct)
 	}
 }
 
 func TestRouter_AdminImoveisList_RequiresAuth(t *testing.T) {
 	router := newTestRouter(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/admin/imoveis", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/imoveis", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusSeeOther {
-		t.Errorf("expected redirect status %d, got %d", http.StatusSeeOther, rec.Code)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d", rec.Code)
 	}
-	if loc := rec.Header().Get("Location"); loc != "/admin/login" {
-		t.Errorf("expected redirect to /admin/login, got %q", loc)
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("expected JSON content-type, got %q", ct)
 	}
 }
 
@@ -104,14 +102,14 @@ func loginAsTestAdmin(t *testing.T, conn *sql.DB, router http.Handler) []*http.C
 		t.Fatalf("creating admin returned error: %v", err)
 	}
 
-	form := url.Values{"email": {"admin@example.com"}, "senha": {"senha-segura"}}
-	req := httptest.NewRequest(http.MethodPost, "/admin/login", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	body, _ := json.Marshal(map[string]string{"email": "admin@example.com", "senha": "senha-segura"})
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusSeeOther {
-		t.Fatalf("expected login redirect %d, got %d: %s", http.StatusSeeOther, rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected login status 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	return rec.Result().Cookies()
@@ -130,8 +128,8 @@ func TestRouter_AdminImoveis_FullCRUDFlow(t *testing.T) {
 
 	cfg := config.Config{SessionSecret: "test-secret-do-not-use-in-prod", UploadsDir: t.TempDir()}
 	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
-
 	cookies := loginAsTestAdmin(t, conn, router)
+
 	authedRequest := func(method, target string, body io.Reader, contentType string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, target, body)
 		if contentType != "" {
@@ -144,50 +142,67 @@ func TestRouter_AdminImoveis_FullCRUDFlow(t *testing.T) {
 		router.ServeHTTP(rec, req)
 		return rec
 	}
-
-	createForm := url.Values{
-		"titulo": {"Casa de Praia"}, "descricao": {"Bem perto do mar."},
-		"tipo": {"casa"}, "finalidade": {"venda"},
-		"cidade": {"Florianópolis"}, "bairro": {"Jurerê"}, "endereco": {"Av. Beira Mar, 1"},
-		"preco": {"1200000"}, "area_m2": {"220"}, "quartos": {"4"}, "banheiros": {"3"},
-		"vagas_garagem": {"2"}, "status": {"disponivel"}, "destaque": {"1"},
+	jsonBody := func(v any) io.Reader {
+		b, _ := json.Marshal(v)
+		return bytes.NewReader(b)
 	}
-	createRec := authedRequest(http.MethodPost, "/admin/imoveis", strings.NewReader(createForm.Encode()), "application/x-www-form-urlencoded")
-	if createRec.Code != http.StatusSeeOther {
-		t.Fatalf("expected create redirect %d, got %d: %s", http.StatusSeeOther, createRec.Code, createRec.Body.String())
-	}
-	location := createRec.Header().Get("Location")
 
-	listRec := authedRequest(http.MethodGet, "/admin/imoveis", nil, "")
+	payload := map[string]any{
+		"Titulo": "Casa de Praia", "Descricao": "Bem perto do mar.",
+		"Tipo": "casa", "Finalidade": "venda",
+		"Cidade": "Florianópolis", "Bairro": "Jurerê", "Endereco": "Av. Beira Mar, 1",
+		"Preco": 1200000.0, "AreaM2": 220.0, "Quartos": 4, "Banheiros": 3,
+		"VagasGaragem": 2, "Status": "disponivel", "Destaque": true,
+	}
+
+	// Create → 201
+	createRec := authedRequest(http.MethodPost, "/api/admin/imoveis", jsonBody(payload), "application/json")
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected create status 201, got %d: %s", createRec.Code, createRec.Body.String())
+	}
+	var created struct{ ID int64 }
+	if err := json.NewDecoder(createRec.Body).Decode(&created); err != nil {
+		t.Fatalf("decoding create response: %v", err)
+	}
+	if created.ID == 0 {
+		t.Fatal("expected non-zero ID from create response")
+	}
+	imovelID := created.ID
+
+	// List → contains new imovel
+	listRec := authedRequest(http.MethodGet, "/api/admin/imoveis", nil, "")
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected list status 200, got %d", listRec.Code)
+	}
 	if !strings.Contains(listRec.Body.String(), "Casa de Praia") {
 		t.Errorf("expected list to contain the new imóvel, got: %s", listRec.Body.String())
 	}
 
-	editRec := authedRequest(http.MethodGet, location, nil, "")
-	if editRec.Code != http.StatusOK || !strings.Contains(editRec.Body.String(), "Casa de Praia") {
-		t.Fatalf("expected edit form %d w/ titulo, got %d: %s", http.StatusOK, editRec.Code, editRec.Body.String())
+	// Get single → 200, returns {Imovel, Fotos}
+	getRec := authedRequest(http.MethodGet, fmt.Sprintf("/api/admin/imoveis/%d", imovelID), nil, "")
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("expected get status 200, got %d: %s", getRec.Code, getRec.Body.String())
+	}
+	if !strings.Contains(getRec.Body.String(), "Casa de Praia") {
+		t.Errorf("expected get response to contain titulo, got: %s", getRec.Body.String())
 	}
 
-	updateForm := url.Values(createForm)
-	updateForm.Set("titulo", "Casa de Praia Reformada")
-	updateRec := authedRequest(http.MethodPost, strings.TrimSuffix(location, "/editar"), strings.NewReader(updateForm.Encode()), "application/x-www-form-urlencoded")
-	if updateRec.Code != http.StatusSeeOther {
-		t.Fatalf("expected update redirect %d, got %d: %s", http.StatusSeeOther, updateRec.Code, updateRec.Body.String())
+	// Update → 200
+	payload["Titulo"] = "Casa de Praia Reformada"
+	updateRec := authedRequest(http.MethodPut, fmt.Sprintf("/api/admin/imoveis/%d", imovelID), jsonBody(payload), "application/json")
+	if updateRec.Code != http.StatusOK {
+		t.Fatalf("expected update status 200, got %d: %s", updateRec.Code, updateRec.Body.String())
 	}
 
-	listRec = authedRequest(http.MethodGet, "/admin/imoveis", nil, "")
+	listRec = authedRequest(http.MethodGet, "/api/admin/imoveis", nil, "")
 	if !strings.Contains(listRec.Body.String(), "Casa de Praia Reformada") {
 		t.Errorf("expected list to reflect the update, got: %s", listRec.Body.String())
 	}
 
-	destaqueRec := authedRequest(http.MethodPost, strings.TrimSuffix(location, "/editar")+"/destaque", nil, "")
-	if destaqueRec.Code != http.StatusSeeOther {
-		t.Fatalf("expected destaque toggle redirect %d, got %d", http.StatusSeeOther, destaqueRec.Code)
-	}
-
-	imovelID, err := strconv.ParseInt(strings.TrimSuffix(strings.TrimPrefix(location, "/admin/imoveis/"), "/editar"), 10, 64)
-	if err != nil {
-		t.Fatalf("failed to parse imóvel ID from location %q: %v", location, err)
+	// Toggle destaque (created with Destaque:true → toggles to false)
+	destaqueRec := authedRequest(http.MethodPost, fmt.Sprintf("/api/admin/imoveis/%d/destaque", imovelID), nil, "")
+	if destaqueRec.Code != http.StatusOK {
+		t.Fatalf("expected destaque toggle status 200, got %d", destaqueRec.Code)
 	}
 	imoveis := repo.NewImovelRepo(conn)
 	updated, err := imoveis.Get(context.Background(), imovelID)
@@ -198,14 +213,15 @@ func TestRouter_AdminImoveis_FullCRUDFlow(t *testing.T) {
 		t.Error("expected destaque to be toggled off")
 	}
 
-	deleteRec := authedRequest(http.MethodPost, strings.TrimSuffix(location, "/editar")+"/excluir", nil, "")
-	if deleteRec.Code != http.StatusSeeOther {
-		t.Fatalf("expected delete redirect %d, got %d", http.StatusSeeOther, deleteRec.Code)
+	// Delete → 200
+	deleteRec := authedRequest(http.MethodDelete, fmt.Sprintf("/api/admin/imoveis/%d", imovelID), nil, "")
+	if deleteRec.Code != http.StatusOK {
+		t.Fatalf("expected delete status 200, got %d", deleteRec.Code)
 	}
 
-	listRec = authedRequest(http.MethodGet, "/admin/imoveis", nil, "")
+	listRec = authedRequest(http.MethodGet, "/api/admin/imoveis", nil, "")
 	if strings.Contains(listRec.Body.String(), "Casa de Praia Reformada") {
-		t.Errorf("expected deleted imóvel to be gone from the list, got: %s", listRec.Body.String())
+		t.Errorf("expected deleted imóvel to be gone from list, got: %s", listRec.Body.String())
 	}
 }
 
@@ -236,35 +252,48 @@ func TestRouter_AdminFotos_UploadPrincipalAndRemoveFlow(t *testing.T) {
 
 	uploadRec := uploadSampleFoto(t, router, cookies, imovelID)
 	if uploadRec.Code != http.StatusOK {
-		t.Fatalf("expected upload status %d, got %d: %s", http.StatusOK, uploadRec.Code, uploadRec.Body.String())
+		t.Fatalf("expected upload status 200, got %d: %s", uploadRec.Code, uploadRec.Body.String())
 	}
-	if !strings.Contains(uploadRec.Body.String(), "fotos-grid") {
-		t.Errorf("expected fragment to contain the fotos grid, got: %s", uploadRec.Body.String())
+	if ct := uploadRec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("expected JSON content-type on upload, got %q", ct)
 	}
 
-	imgSrcMatch := regexp.MustCompile(`<img src="([^"]+)"`).FindStringSubmatch(uploadRec.Body.String())
-	if len(imgSrcMatch) != 2 {
-		t.Fatalf("expected to find an <img src> in the fragment, got: %s", uploadRec.Body.String())
+	var fotosResp []repo.Foto
+	if err := json.NewDecoder(uploadRec.Body).Decode(&fotosResp); err != nil {
+		t.Fatalf("decoding fotos response: %v", err)
 	}
-	imgSrc := imgSrcMatch[1]
+	if len(fotosResp) != 1 {
+		t.Fatalf("expected 1 foto in response, got %d", len(fotosResp))
+	}
+	fotoID := fotosResp[0].ID
+	imgSrc := "/uploads/" + fotosResp[0].CaminhoOriginal
+
 	if !strings.HasPrefix(imgSrc, fmt.Sprintf("/uploads/%d/", imovelID)) {
-		t.Errorf("expected img src to be a servable /uploads/%d/... URL, got %q", imovelID, imgSrc)
+		t.Errorf("expected img src to be /uploads/%d/..., got %q", imovelID, imgSrc)
 	}
 	if strings.Contains(imgSrc, uploadsDir) {
-		t.Errorf("expected img src %q to be decoupled from the configured uploadsDir %q, but it contains it", imgSrc, uploadsDir)
+		t.Errorf("expected img src %q to be decoupled from uploadsDir %q", imgSrc, uploadsDir)
 	}
 
 	imgReq := httptest.NewRequest(http.MethodGet, imgSrc, nil)
-	for _, c := range cookies {
-		imgReq.AddCookie(c)
-	}
 	imgRec := httptest.NewRecorder()
 	router.ServeHTTP(imgRec, imgReq)
 	if imgRec.Code != http.StatusOK {
-		t.Fatalf("expected GET %s status %d, got %d", imgSrc, http.StatusOK, imgRec.Code)
+		t.Fatalf("expected GET %s status 200, got %d", imgSrc, imgRec.Code)
 	}
 	if ct := imgRec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "image/") {
 		t.Errorf("expected GET %s Content-Type to start with image/, got %q", imgSrc, ct)
+	}
+
+	// Set principal
+	principalReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/admin/imoveis/%d/fotos/%d/principal", imovelID, fotoID), nil)
+	for _, c := range cookies {
+		principalReq.AddCookie(c)
+	}
+	principalRec := httptest.NewRecorder()
+	router.ServeHTTP(principalRec, principalReq)
+	if principalRec.Code != http.StatusOK {
+		t.Fatalf("expected principal toggle status 200, got %d", principalRec.Code)
 	}
 
 	fotos := repo.NewFotoRepo(conn)
@@ -272,34 +301,19 @@ func TestRouter_AdminFotos_UploadPrincipalAndRemoveFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListByImovel returned error: %v", err)
 	}
-	if len(list) != 1 {
-		t.Fatalf("expected 1 foto after upload, got %d", len(list))
-	}
-	fotoID := list[0].ID
-
-	principalReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/imoveis/%d/fotos/%d/principal", imovelID, fotoID), nil)
-	for _, c := range cookies {
-		principalReq.AddCookie(c)
-	}
-	principalRec := httptest.NewRecorder()
-	router.ServeHTTP(principalRec, principalReq)
-	if principalRec.Code != http.StatusOK {
-		t.Fatalf("expected principal toggle status %d, got %d", http.StatusOK, principalRec.Code)
-	}
-
-	list, _ = fotos.ListByImovel(context.Background(), imovelID)
 	if !list[0].Principal {
 		t.Error("expected foto to be marked principal")
 	}
 
-	deleteReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/imoveis/%d/fotos/%d/excluir", imovelID, fotoID), nil)
+	// Delete foto
+	deleteReq := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/admin/imoveis/%d/fotos/%d", imovelID, fotoID), nil)
 	for _, c := range cookies {
 		deleteReq.AddCookie(c)
 	}
 	deleteRec := httptest.NewRecorder()
 	router.ServeHTTP(deleteRec, deleteReq)
 	if deleteRec.Code != http.StatusOK {
-		t.Fatalf("expected delete status %d, got %d", http.StatusOK, deleteRec.Code)
+		t.Fatalf("expected delete status 200, got %d", deleteRec.Code)
 	}
 
 	list, _ = fotos.ListByImovel(context.Background(), imovelID)
@@ -355,7 +369,7 @@ func TestRouter_PublicImoveis_ListsDisponivel(t *testing.T) {
 		t.Fatalf("Create vendido returned error: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/imoveis", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/imoveis", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -400,7 +414,7 @@ func TestRouter_PublicImoveis_FilterByFinalidade(t *testing.T) {
 		t.Fatalf("Create aluguel returned error: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/imoveis?finalidade=venda", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/imoveis?finalidade=venda", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -437,7 +451,7 @@ func TestRouter_PublicImovelDetail_BySlug(t *testing.T) {
 		t.Fatalf("Create returned error: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/imoveis/casa-com-vista-para-o-mar", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/imoveis/casa-com-vista-para-o-mar", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -452,7 +466,7 @@ func TestRouter_PublicImovelDetail_BySlug(t *testing.T) {
 func TestRouter_PublicImovelDetail_NotFound(t *testing.T) {
 	router := newTestRouter(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/imoveis/slug-inexistente", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/imoveis/slug-inexistente", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -488,7 +502,7 @@ func uploadSampleFoto(t *testing.T, router http.Handler, cookies []*http.Cookie,
 		t.Fatalf("closing multipart writer: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/imoveis/%d/fotos", imovelID), &body)
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/admin/imoveis/%d/fotos", imovelID), &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	for _, c := range cookies {
 		req.AddCookie(c)
