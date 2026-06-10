@@ -38,6 +38,17 @@ func (r AdminRepo) FindByEmail(ctx context.Context, email string) (Admin, error)
 	return a, nil
 }
 
+func (r AdminRepo) FindByID(ctx context.Context, id int64) (Admin, error) {
+	var a Admin
+	err := r.conn.QueryRowContext(ctx,
+		`SELECT id, email, senha_hash FROM admins WHERE id = ?`, id,
+	).Scan(&a.ID, &a.Email, &a.SenhaHash)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Admin{}, ErrNotFound
+	}
+	return a, err
+}
+
 func (r AdminRepo) Create(ctx context.Context, email, senhaHash string) (int64, error) {
 	result, err := r.conn.ExecContext(ctx,
 		`INSERT INTO admins (email, senha_hash) VALUES (?, ?)`, email, senhaHash,
