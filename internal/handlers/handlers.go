@@ -30,10 +30,7 @@ func NewRouter(deps Deps) http.Handler {
 	cfgRepo := repo.NewConfiguracaoRepo(deps.Conn)
 
 	api := newAPIHandlers(imoveis, fotos, cfgRepo)
-	authHandlers := newAuthHandlers(sessions, admins)
-	imovelHandlers := newImovelHandlers(deps.Config.UploadsDir, imoveis, fotos)
-	fotoHandlers := newFotoHandlers(deps.Config.UploadsDir, imoveis, fotos)
-	cfgHandlers := newConfigHandlers(deps.Config.UploadsDir, cfgRepo)
+	adminAPI := newAdminAPIHandlers(deps.Config.UploadsDir, sessions, admins, imoveis, fotos, cfgRepo)
 
 	requireAuth := RequireAuth(sessions)
 
@@ -44,47 +41,40 @@ func NewRouter(deps Deps) http.Handler {
 	mux.Handle("GET /static/", http.FileServerFS(assets.Static))
 	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadsDir))))
 
-	// JSON API — public site data
+	// Public JSON API
 	mux.HandleFunc("GET /api/configuracao", api.configuracao)
 	mux.HandleFunc("GET /api/imoveis", api.imovelList)
 	mux.HandleFunc("GET /api/imoveis/{slug}", api.imovelDetail)
 
-	// Admin
-	mux.HandleFunc("GET /admin/login", authHandlers.loginPage)
-	mux.HandleFunc("POST /admin/login", authHandlers.login)
-	mux.Handle("POST /admin/logout", requireAuth(http.HandlerFunc(authHandlers.logout)))
+	// Admin auth
+	mux.HandleFunc("POST /api/admin/login", adminAPI.login)
+	mux.Handle("POST /api/admin/logout", requireAuth(http.HandlerFunc(adminAPI.logout)))
+	mux.Handle("GET /api/admin/me", requireAuth(http.HandlerFunc(adminAPI.me)))
 
-	mux.Handle("GET /admin/imoveis", requireAuth(http.HandlerFunc(imovelHandlers.list)))
-	mux.Handle("GET /admin/imoveis/novo", requireAuth(http.HandlerFunc(imovelHandlers.newForm)))
-	mux.Handle("POST /admin/imoveis", requireAuth(http.HandlerFunc(imovelHandlers.create)))
-	mux.Handle("GET /admin/imoveis/{id}/editar", requireAuth(http.HandlerFunc(imovelHandlers.editForm)))
-	mux.Handle("POST /admin/imoveis/{id}", requireAuth(http.HandlerFunc(imovelHandlers.update)))
-	mux.Handle("POST /admin/imoveis/{id}/excluir", requireAuth(http.HandlerFunc(imovelHandlers.delete)))
-	mux.Handle("POST /admin/imoveis/{id}/destaque", requireAuth(http.HandlerFunc(imovelHandlers.toggleDestaque)))
+	// Admin imóveis
+	mux.Handle("GET /api/admin/imoveis", requireAuth(http.HandlerFunc(adminAPI.imovelList)))
+	mux.Handle("POST /api/admin/imoveis", requireAuth(http.HandlerFunc(adminAPI.imovelCreate)))
+	mux.Handle("GET /api/admin/imoveis/{id}", requireAuth(http.HandlerFunc(adminAPI.imovelGet)))
+	mux.Handle("PUT /api/admin/imoveis/{id}", requireAuth(http.HandlerFunc(adminAPI.imovelUpdate)))
+	mux.Handle("DELETE /api/admin/imoveis/{id}", requireAuth(http.HandlerFunc(adminAPI.imovelDelete)))
+	mux.Handle("POST /api/admin/imoveis/{id}/destaque", requireAuth(http.HandlerFunc(adminAPI.imovelToggleDestaque)))
 
-	mux.Handle("POST /admin/imoveis/{id}/fotos", requireAuth(http.HandlerFunc(fotoHandlers.upload)))
-	mux.Handle("POST /admin/imoveis/{id}/fotos/{fotoID}/principal", requireAuth(http.HandlerFunc(fotoHandlers.setPrincipal)))
-	mux.Handle("POST /admin/imoveis/{id}/fotos/{fotoID}/excluir", requireAuth(http.HandlerFunc(fotoHandlers.delete)))
+	// Admin fotos
+	mux.Handle("POST /api/admin/imoveis/{id}/fotos", requireAuth(http.HandlerFunc(adminAPI.fotoUpload)))
+	mux.Handle("POST /api/admin/imoveis/{id}/fotos/{fotoID}/principal", requireAuth(http.HandlerFunc(adminAPI.fotoPrincipal)))
+	mux.Handle("DELETE /api/admin/imoveis/{id}/fotos/{fotoID}", requireAuth(http.HandlerFunc(adminAPI.fotoDelete)))
 
-	mux.Handle("GET /admin/configuracao", requireAuth(http.HandlerFunc(cfgHandlers.showForm)))
-	mux.Handle("POST /admin/configuracao", requireAuth(http.HandlerFunc(cfgHandlers.update)))
+	// Admin configuração
+	mux.Handle("GET /api/admin/configuracao", requireAuth(http.HandlerFunc(adminAPI.configGet)))
+	mux.Handle("PUT /api/admin/configuracao", requireAuth(http.HandlerFunc(adminAPI.configUpdate)))
 
-	// /admin and /login shortcuts → admin login
-	adminRedirect := func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/admin/login", http.StatusFound)
-	}
-	mux.HandleFunc("GET /admin", adminRedirect)
-	mux.HandleFunc("GET /login", adminRedirect)
-
-	// React SPA — catch-all for public routes
+	// React SPA — catch-all (serves index.html for all /admin/* page loads too)
 	distFS, _ := fs.Sub(frontend.Dist, "dist")
 	mux.Handle("/", newSPAHandler(distFS))
 
 	return mux
 }
 
-// newSPAHandler serves static files from the React build, falling back to
-// index.html for any path that isn't a real file (client-side routing).
 func newSPAHandler(fsys fs.FS) http.Handler {
 	fileServer := http.FileServerFS(fsys)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +84,6 @@ func newSPAHandler(fsys fs.FS) http.Handler {
 		}
 		f, err := fsys.Open(path)
 		if err != nil {
-			// Not a real file — let React Router handle it
 			http.ServeFileFS(w, r, fsys, "index.html")
 			return
 		}
