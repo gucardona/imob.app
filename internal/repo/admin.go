@@ -46,7 +46,10 @@ func (r AdminRepo) FindByID(ctx context.Context, id int64) (Admin, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return Admin{}, ErrNotFound
 	}
-	return a, err
+	if err != nil {
+		return Admin{}, err
+	}
+	return a, nil
 }
 
 func (r AdminRepo) Create(ctx context.Context, email, senhaHash string) (int64, error) {
