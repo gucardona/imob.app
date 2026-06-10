@@ -2,6 +2,20 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { listImoveis, deleteImovel, toggleDestaque } from '../api.js'
 import StatusBadge from '../components/StatusBadge.jsx'
+import { formatPrice } from '../../utils.js'
+
+function Skeleton() {
+  return (
+    <div className="animate-pulse bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="flex justify-between mb-4">
+        <div className="h-5 bg-gray-100 rounded w-1/2" />
+        <div className="h-5 bg-gray-100 rounded w-16" />
+      </div>
+      <div className="h-3 bg-gray-100 rounded w-1/3 mb-4" />
+      <div className="h-4 bg-gray-100 rounded w-1/4" />
+    </div>
+  )
+}
 
 export default function ImoveisList() {
   const [imoveis, setImoveis] = useState([])
@@ -19,7 +33,7 @@ export default function ImoveisList() {
   useEffect(() => { load() }, [load])
 
   async function handleDelete(id) {
-    if (!confirm('Excluir este imóvel?')) return
+    if (!confirm('Excluir este imóvel permanentemente?')) return
     await deleteImovel(id).catch(() => alert('Erro ao excluir.'))
     load()
   }
@@ -29,75 +43,102 @@ export default function ImoveisList() {
     load()
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Carregando…</p>
-  if (error) return <p className="text-sm text-red-600">{error}</p>
-
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Imóveis</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Imóveis</h1>
+          {!loading && (
+            <p className="text-gray-400 text-sm mt-1">{imoveis.length} imóvel(eis)</p>
+          )}
+        </div>
         <Link
           to="/admin/imoveis/novo"
-          className="bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded hover:bg-gray-700"
+          className="flex items-center gap-2 bg-[#8B1538] hover:bg-[#6D112B] text-white px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95"
         >
-          + Novo
+          <iconify-icon icon="lucide:plus" class="text-base"></iconify-icon>
+          <span className="hidden sm:inline">Novo Imóvel</span>
+          <span className="sm:hidden">Novo</span>
         </Link>
       </div>
 
-      {imoveis.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhum imóvel cadastrado.</p>
+      {error && (
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-sm text-red-500 mb-6">{error}</div>
+      )}
+
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => <Skeleton key={i} />)}
+        </div>
+      ) : imoveis.length === 0 ? (
+        <div className="text-center py-24 text-gray-400">
+          <iconify-icon icon="lucide:building-2" class="text-5xl mb-4 block mx-auto"></iconify-icon>
+          <p className="text-sm mb-6">Nenhum imóvel cadastrado ainda.</p>
+          <Link
+            to="/admin/imoveis/novo"
+            className="text-sm font-bold text-[#8B1538] hover:underline"
+          >
+            Cadastrar primeiro imóvel
+          </Link>
+        </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
-              <tr>
-                <th className="px-4 py-3 text-left">Título</th>
-                <th className="px-4 py-3 text-left">Tipo / Finalidade</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Preço</th>
-                <th className="px-4 py-3 text-left">Destaque</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {imoveis.map(im => (
-                <tr key={im.ID} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">{im.Titulo}</td>
-                  <td className="px-4 py-3 text-gray-500 capitalize">{im.Tipo} / {im.Finalidade}</td>
-                  <td className="px-4 py-3"><StatusBadge status={im.Status} /></td>
-                  <td className="px-4 py-3 text-gray-700">
-                    {im.Preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleDestaque(im.ID)}
-                      className={`text-xs px-2 py-1 rounded ${
-                        im.Destaque
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {im.Destaque ? '★ Sim' : '☆ Não'}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <Link
-                      to={`/admin/imoveis/${im.ID}/editar`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Editar
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(im.ID)}
-                      className="text-red-500 hover:underline"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {imoveis.map(im => (
+            <div
+              key={im.ID}
+              className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col sm:flex-row sm:items-center gap-4 custom-shadow"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <h3 className="font-bold text-gray-900 tracking-tight truncate">{im.Titulo}</h3>
+                  <StatusBadge status={im.Status} />
+                  {im.Destaque && (
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#8B1538] bg-[rgba(139,21,56,0.08)] px-2 py-0.5 rounded-full">
+                      Destaque
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-400">
+                  {[im.Cidade, im.Bairro].filter(Boolean).join(' · ')}
+                  {im.Cidade || im.Bairro ? ' · ' : ''}
+                  <span className="capitalize">{im.Tipo}</span>
+                  {' / '}
+                  <span className="capitalize">{im.Finalidade}</span>
+                </p>
+                <p className="text-[#8B1538] font-bold text-sm mt-1">
+                  {formatPrice(im.Preco, im.Finalidade)}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleDestaque(im.ID)}
+                  title={im.Destaque ? 'Remover destaque' : 'Marcar como destaque'}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                    im.Destaque
+                      ? 'bg-[rgba(139,21,56,0.08)] text-[#8B1538]'
+                      : 'bg-gray-100 text-gray-400 hover:text-[#8B1538]'
+                  }`}
+                >
+                  <iconify-icon icon={im.Destaque ? 'lucide:star' : 'lucide:star'} class="text-base"></iconify-icon>
+                </button>
+                <Link
+                  to={`/admin/imoveis/${im.ID}/editar`}
+                  className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 hover:text-[#8B1538] transition-colors"
+                  title="Editar"
+                >
+                  <iconify-icon icon="lucide:pencil" class="text-base"></iconify-icon>
+                </Link>
+                <button
+                  onClick={() => handleDelete(im.ID)}
+                  className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+                  title="Excluir"
+                >
+                  <iconify-icon icon="lucide:trash-2" class="text-base"></iconify-icon>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

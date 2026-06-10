@@ -27,14 +27,17 @@ export default function FotosGrid({ imovelID, fotos, onChange }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">Fotos</h3>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-semibold text-gray-500">
+          {fotos.length} foto{fotos.length !== 1 ? 's' : ''}
+        </p>
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="text-xs bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-700"
+          className="flex items-center gap-1.5 text-xs font-bold text-[#8B1538] hover:underline"
         >
-          + Adicionar
+          <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
+          Adicionar fotos
         </button>
         <input
           ref={fileRef}
@@ -47,27 +50,34 @@ export default function FotosGrid({ imovelID, fotos, onChange }) {
       </div>
 
       {fotos.length === 0 ? (
-        <p className="text-xs text-gray-400">Nenhuma foto ainda.</p>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="w-full border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center text-gray-400 hover:border-[#8B1538] hover:text-[#8B1538] transition-colors"
+        >
+          <iconify-icon icon="lucide:image-plus" class="text-3xl mb-2 block mx-auto"></iconify-icon>
+          <span className="text-sm font-medium">Clique para adicionar fotos</span>
+        </button>
       ) : (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {fotos.map(f => (
-            <div key={f.ID} className="relative group rounded overflow-hidden bg-gray-100 aspect-video">
+            <div key={f.ID} className="relative group rounded-2xl overflow-hidden bg-gray-100 aspect-video">
               <img
                 src={`/uploads/${f.CaminhoThumb}`}
                 alt=""
                 className="w-full h-full object-cover"
               />
               {f.Principal && (
-                <span className="absolute top-1 left-1 text-xs bg-yellow-400 text-yellow-900 px-1 rounded">
+                <span className="absolute top-2 left-2 text-[10px] uppercase tracking-widest font-bold bg-[#8B1538] text-white px-2 py-0.5 rounded-sm">
                   Principal
                 </span>
               )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
                 {!f.Principal && (
                   <button
                     type="button"
                     onClick={() => handlePrincipal(f.ID)}
-                    className="text-xs bg-white text-gray-800 px-2 py-1 rounded"
+                    className="text-[10px] uppercase tracking-widest font-bold bg-white text-[#8B1538] px-3 py-1.5 rounded-lg"
                   >
                     Principal
                   </button>
@@ -75,9 +85,9 @@ export default function FotosGrid({ imovelID, fotos, onChange }) {
                 <button
                   type="button"
                   onClick={() => handleDelete(f.ID)}
-                  className="text-xs bg-red-500 text-white px-2 py-1 rounded"
+                  className="w-8 h-8 bg-red-500 text-white rounded-lg flex items-center justify-center"
                 >
-                  Excluir
+                  <iconify-icon icon="lucide:trash-2" class="text-sm"></iconify-icon>
                 </button>
               </div>
             </div>

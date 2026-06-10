@@ -34,39 +34,56 @@ export default function Login() {
   if (admin === undefined) return null
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow p-8 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-gray-800 mb-6">Admin</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-            />
+    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-6">
+      <div className="w-full max-w-sm">
+        <div className="flex items-center gap-2 mb-8 justify-center">
+          <div className="w-8 h-8 bg-[#8B1538] flex items-center justify-center rounded-sm">
+            <iconify-icon icon="lucide:layout-dashboard" class="text-white text-base"></iconify-icon>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-            <input
-              type="password"
-              value={senha}
-              onChange={e => setSenha(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-            />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gray-800 text-white rounded py-2 text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
-          >
-            {loading ? 'Entrando…' : 'Entrar'}
-          </button>
-        </form>
+          <span className="text-xl font-bold tracking-tight uppercase">Admin</span>
+        </div>
+
+        <div className="bg-white rounded-2xl p-8 custom-shadow border border-gray-100">
+          <h1 className="text-2xl font-bold tracking-tight mb-6">Entrar</h1>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-2">
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400 transition-colors"
+                placeholder="seu@email.com"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-2">
+                Senha
+              </label>
+              <input
+                type="password"
+                value={senha}
+                onChange={e => setSenha(e.target.value)}
+                required
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400 transition-colors"
+                placeholder="••••••••"
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-red-500 font-medium">{error}</p>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#8B1538] hover:bg-[#6D112B] text-white rounded-xl py-3 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 mt-2"
+            >
+              {loading ? 'Entrando…' : 'Entrar'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )

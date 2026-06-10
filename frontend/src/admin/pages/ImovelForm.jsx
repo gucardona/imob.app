@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { getImovel, createImovel, updateImovel } from '../api.js'
 import FotosGrid from '../components/FotosGrid.jsx'
 
@@ -8,6 +8,17 @@ const EMPTY = {
   Cidade: '', Bairro: '', Endereco: '',
   Preco: '', AreaM2: '', Quartos: '', Banheiros: '', VagasGaragem: '',
   Status: 'disponivel', Destaque: false,
+}
+
+function Skeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="h-8 bg-gray-100 rounded w-1/3" />
+      <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+        {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl" />)}
+      </div>
+    </div>
+  )
 }
 
 export default function ImovelForm() {
@@ -64,11 +75,8 @@ export default function ImovelForm() {
       VagasGaragem: parseInt(form.VagasGaragem) || 0,
     }
     try {
-      if (isEdit) {
-        await updateImovel(id, body)
-      } else {
-        await createImovel(body)
-      }
+      if (isEdit) await updateImovel(id, body)
+      else await createImovel(body)
       navigate('/admin/imoveis')
     } catch {
       setError('Erro ao salvar imóvel.')
@@ -77,29 +85,48 @@ export default function ImovelForm() {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Carregando…</p>
+  if (loading) return <Skeleton />
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">
-        {isEdit ? 'Editar Imóvel' : 'Novo Imóvel'}
-      </h1>
+    <div>
+      <div className="flex items-center gap-3 mb-8">
+        <Link
+          to="/admin/imoveis"
+          className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-[#8B1538] transition-colors custom-shadow"
+        >
+          <iconify-icon icon="lucide:arrow-left" class="text-base"></iconify-icon>
+        </Link>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {isEdit ? 'Editar Imóvel' : 'Novo Imóvel'}
+        </h1>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <section className="bg-white rounded-lg shadow p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informações</h2>
-
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+        {/* Informações básicas */}
+        <Section title="Informações">
           <Field label="Título">
-            <input value={form.Titulo} onChange={e => set('Titulo', e.target.value)} required className={input} />
+            <input
+              value={form.Titulo}
+              onChange={e => set('Titulo', e.target.value)}
+              required
+              placeholder="Ex: Casa de praia em Jurerê"
+              className={inp}
+            />
           </Field>
 
           <Field label="Descrição">
-            <textarea value={form.Descricao} onChange={e => set('Descricao', e.target.value)} rows={4} className={input} />
+            <textarea
+              value={form.Descricao}
+              onChange={e => set('Descricao', e.target.value)}
+              rows={4}
+              placeholder="Descreva o imóvel…"
+              className={inp}
+            />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Tipo">
-              <select value={form.Tipo} onChange={e => set('Tipo', e.target.value)} className={input}>
+              <select value={form.Tipo} onChange={e => set('Tipo', e.target.value)} className={inp}>
                 <option value="casa">Casa</option>
                 <option value="apartamento">Apartamento</option>
                 <option value="terreno">Terreno</option>
@@ -107,47 +134,46 @@ export default function ImovelForm() {
               </select>
             </Field>
             <Field label="Finalidade">
-              <select value={form.Finalidade} onChange={e => set('Finalidade', e.target.value)} className={input}>
+              <select value={form.Finalidade} onChange={e => set('Finalidade', e.target.value)} className={inp}>
                 <option value="venda">Venda</option>
                 <option value="aluguel">Aluguel</option>
               </select>
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Cidade">
-              <input value={form.Cidade} onChange={e => set('Cidade', e.target.value)} className={input} />
+              <input value={form.Cidade} onChange={e => set('Cidade', e.target.value)} className={inp} placeholder="Ex: Florianópolis" />
             </Field>
             <Field label="Bairro">
-              <input value={form.Bairro} onChange={e => set('Bairro', e.target.value)} className={input} />
+              <input value={form.Bairro} onChange={e => set('Bairro', e.target.value)} className={inp} placeholder="Ex: Jurerê" />
             </Field>
             <Field label="Endereço">
-              <input value={form.Endereco} onChange={e => set('Endereco', e.target.value)} className={input} />
+              <input value={form.Endereco} onChange={e => set('Endereco', e.target.value)} className={inp} placeholder="Ex: Av. Beira Mar, 100" />
             </Field>
           </div>
-        </section>
+        </Section>
 
-        <section className="bg-white rounded-lg shadow p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Detalhes</h2>
-
-          <div className="grid grid-cols-2 gap-4">
+        {/* Detalhes */}
+        <Section title="Detalhes">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Field label="Preço (R$)">
-              <input type="number" step="0.01" value={form.Preco} onChange={e => set('Preco', e.target.value)} className={input} />
+              <input type="number" step="1" min="0" value={form.Preco} onChange={e => set('Preco', e.target.value)} className={inp} placeholder="0" />
             </Field>
             <Field label="Área (m²)">
-              <input type="number" step="0.01" value={form.AreaM2} onChange={e => set('AreaM2', e.target.value)} className={input} />
+              <input type="number" step="0.01" min="0" value={form.AreaM2} onChange={e => set('AreaM2', e.target.value)} className={inp} placeholder="0" />
             </Field>
             <Field label="Quartos">
-              <input type="number" value={form.Quartos} onChange={e => set('Quartos', e.target.value)} className={input} />
+              <input type="number" min="0" value={form.Quartos} onChange={e => set('Quartos', e.target.value)} className={inp} placeholder="0" />
             </Field>
             <Field label="Banheiros">
-              <input type="number" value={form.Banheiros} onChange={e => set('Banheiros', e.target.value)} className={input} />
+              <input type="number" min="0" value={form.Banheiros} onChange={e => set('Banheiros', e.target.value)} className={inp} placeholder="0" />
             </Field>
-            <Field label="Vagas de Garagem">
-              <input type="number" value={form.VagasGaragem} onChange={e => set('VagasGaragem', e.target.value)} className={input} />
+            <Field label="Vagas">
+              <input type="number" min="0" value={form.VagasGaragem} onChange={e => set('VagasGaragem', e.target.value)} className={inp} placeholder="0" />
             </Field>
             <Field label="Status">
-              <select value={form.Status} onChange={e => set('Status', e.target.value)} className={input}>
+              <select value={form.Status} onChange={e => set('Status', e.target.value)} className={inp}>
                 <option value="disponivel">Disponível</option>
                 <option value="vendido">Vendido</option>
                 <option value="alugado">Alugado</option>
@@ -156,37 +182,42 @@ export default function ImovelForm() {
             </Field>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.Destaque}
-              onChange={e => set('Destaque', e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            Destaque na página inicial
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div
+              onClick={() => set('Destaque', !form.Destaque)}
+              className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${
+                form.Destaque ? 'bg-[#8B1538]' : 'bg-gray-200'
+              }`}
+            >
+              <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${form.Destaque ? 'translate-x-4' : 'translate-x-0'}`} />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Destaque na página inicial</span>
           </label>
-        </section>
+        </Section>
 
+        {/* Fotos — apenas no modo edição */}
         {isEdit && (
-          <section className="bg-white rounded-lg shadow p-6">
+          <Section title="Fotos">
             <FotosGrid imovelID={parseInt(id)} fotos={fotos} onChange={setFotos} />
-          </section>
+          </Section>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-500 font-medium">{error}</p>
+        )}
 
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3 pb-10">
           <button
             type="submit"
             disabled={saving}
-            className="bg-gray-800 text-white text-sm font-medium px-6 py-2 rounded hover:bg-gray-700 disabled:opacity-50"
+            className="bg-[#8B1538] hover:bg-[#6D112B] text-white px-8 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
           >
             {saving ? 'Salvando…' : 'Salvar'}
           </button>
           <button
             type="button"
             onClick={() => navigate('/admin/imoveis')}
-            className="text-sm text-gray-500 hover:text-gray-800 px-4 py-2"
+            className="px-6 py-3 text-sm font-medium text-gray-400 hover:text-gray-700 transition-colors"
           >
             Cancelar
           </button>
@@ -196,12 +227,21 @@ export default function ImovelForm() {
   )
 }
 
-const input = 'w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400'
+const inp = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400 transition-colors bg-white placeholder-gray-300'
+
+function Section({ title, children }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-6 custom-shadow space-y-5">
+      <h2 className="text-[10px] uppercase tracking-widest font-bold text-gray-400">{title}</h2>
+      {children}
+    </div>
+  )
+}
 
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
       {children}
     </div>
   )
