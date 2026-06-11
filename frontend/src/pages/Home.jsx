@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getImoveis } from '../api'
+import { getWAGenericURL } from '../utils'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import Card from '../components/Card'
@@ -28,10 +29,16 @@ export default function Home({ cfg }) {
   const [finalidade, setFinalidade] = useState('')
   const navigate = useNavigate()
 
-  const heroImage = cfg?.HeroImageURL || HERO_DEFAULT
-  const wa = cfg?.Whatsapp
+  const heroImage = cfg?.HeroImagePath
+    ? `/uploads/${cfg.HeroImagePath}`
+    : (cfg?.HeroImageURL || HERO_DEFAULT)
+  const heroMode = cfg?.HeroMode || 'image'
   const tel = cfg?.Telefone
-  const waText = encodeURIComponent('Olá! Gostaria de mais informações sobre os imóveis.')
+  const waURL = getWAGenericURL(cfg)
+  const heroTitulo = cfg?.HeroTitulo || 'Espaços extraordinários para uma vida bem vivida.'
+  const heroSubtitulo = cfg?.HeroSubtitulo || ''
+  const ctaTexto = cfg?.CtaTexto || 'Ver Imóveis'
+  const ctaLink = cfg?.CtaLink || '/imoveis'
 
   useEffect(() => {
     getImoveis({ destaque: true }).then(data => {
@@ -53,27 +60,72 @@ export default function Home({ cfg }) {
     <div className="min-h-screen flex flex-col">
       <Header cfg={cfg} />
 
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-16 sm:pt-20">
         {/* HERO */}
-        <section className="relative h-[75vh] w-full overflow-hidden">
-          <img
-            src={heroImage}
-            alt="Imóvel de luxo"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 hero-gradient" />
-          <div className="absolute bottom-24 left-8 lg:left-16 max-w-2xl">
-            <span className="inline-block px-3 py-1 bg-white/10 backdrop-blur-md text-white text-[10px] uppercase tracking-[0.2em] font-bold mb-6 border border-white/20">
-              Coleção Exclusiva
-            </span>
-            <h1 className="text-5xl lg:text-7xl font-bold text-white tracking-tighter leading-[0.9] mb-4">
-              Espaços extraordinários para uma vida bem vivida.
-            </h1>
-          </div>
-        </section>
+        {heroMode === 'clean' ? (
+          <section className="relative pt-28 sm:pt-36 pb-24 px-8 lg:px-16 overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(160deg, #ffffff 0%, #f5f5f5 100%)' }} />
+            <div
+              className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-[0.08] pointer-events-none"
+              style={{ backgroundColor: 'var(--color-brand)' }}
+            />
+            <div className="relative max-w-4xl mx-auto text-center">
+              <div className="w-12 h-0.5 mx-auto mb-6 rounded-full" style={{ backgroundColor: 'var(--color-brand)' }} />
+              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 leading-tight mb-4">
+                {heroTitulo}
+              </h1>
+              {heroSubtitulo && (
+                <p className="text-lg text-gray-500 mb-8 leading-snug">
+                  {heroSubtitulo}
+                </p>
+              )}
+              <a
+                href={ctaLink}
+                className="inline-flex items-center gap-2 text-white font-bold text-sm px-6 py-3 rounded-xl transition-all active:scale-95 hover:opacity-90"
+                style={{ backgroundColor: 'var(--color-brand)' }}
+              >
+                {ctaTexto}
+                <iconify-icon icon="lucide:arrow-right" className="text-base"></iconify-icon>
+              </a>
+            </div>
+          </section>
+        ) : (
+          <section className="relative h-[75vh] w-full overflow-hidden">
+            <img
+              src={heroImage}
+              alt="Imóvel de luxo"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 hero-gradient" />
+            <div className="absolute bottom-20 left-8 lg:left-16 max-w-2xl">
+              <h1
+                className="text-5xl lg:text-7xl font-bold text-white tracking-tighter leading-[0.9] mb-4"
+                style={{ textShadow: '0 2px 20px rgba(0,0,0,0.65), 0 1px 4px rgba(0,0,0,0.5)' }}
+              >
+                {heroTitulo}
+              </h1>
+              {heroSubtitulo && (
+                <p
+                  className="text-lg text-white/85 font-medium mb-6 leading-snug"
+                  style={{ textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}
+                >
+                  {heroSubtitulo}
+                </p>
+              )}
+              <a
+                href={ctaLink}
+                className="inline-flex items-center gap-2 bg-white text-[var(--color-brand)] font-bold text-sm px-6 py-3 rounded-xl hover:bg-gray-100 transition-all active:scale-95"
+                style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}
+              >
+                {ctaTexto}
+                <iconify-icon icon="lucide:arrow-right" className="text-base"></iconify-icon>
+              </a>
+            </div>
+          </section>
+        )}
 
         {/* SEARCH BAR */}
-        <div className="max-w-6xl mx-auto px-8 lg:px-0 relative z-10 -mt-12">
+        <div className={`mx-auto px-8 lg:px-0 relative z-10 ${heroMode === 'clean' ? 'max-w-4xl mt-8' : 'max-w-6xl -mt-12'}`}>
           <form
             onSubmit={handleSearch}
             className="bg-white rounded-2xl p-4 custom-shadow border border-gray-100 flex flex-col md:flex-row items-center gap-4"
@@ -119,7 +171,7 @@ export default function Home({ cfg }) {
             </div>
             <button
               type="submit"
-              className="w-full md:w-auto bg-[#8B1538] hover:bg-[#6D112B] text-white px-10 py-5 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
+              className="w-full md:w-auto bg-[var(--color-brand)] hover:bg-[var(--color-brand-dark)] text-white px-10 py-5 rounded-xl font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2"
             >
               <iconify-icon icon="lucide:sliders-horizontal" className="text-lg"></iconify-icon>
               Ver Imóveis
@@ -136,14 +188,9 @@ export default function Home({ cfg }) {
                 Imóveis cuidadosamente selecionados em localizações privilegiadas para você.
               </p>
             </div>
-            <div className="flex gap-4">
-              <button className="px-6 py-3 bg-[#F5F5F5] rounded-full text-sm font-bold hover:bg-gray-200 transition-colors">
-                Destaques
-              </button>
-              <a href="/imoveis" className="px-6 py-3 text-sm font-bold text-[#8B1538] hover:underline">
-                Ver Todos
-              </a>
-            </div>
+            <a href="/imoveis" className="px-6 py-3 text-sm font-bold text-[var(--color-brand)] hover:underline">
+              Ver Todos
+            </a>
           </div>
 
           {loading ? (
@@ -158,7 +205,7 @@ export default function Home({ cfg }) {
             <div className="text-center py-20 text-gray-400">
               <iconify-icon icon="lucide:building-2" className="text-5xl mb-4 mx-auto block"></iconify-icon>
               <p className="text-sm mb-4">Nenhum imóvel em destaque no momento.</p>
-              <a href="/imoveis" className="text-sm font-bold text-[#8B1538] hover:underline">
+              <a href="/imoveis" className="text-sm font-bold text-[var(--color-brand)] hover:underline">
                 Ver todos os imóveis
               </a>
             </div>
@@ -167,26 +214,26 @@ export default function Home({ cfg }) {
 
         {/* CTA SECTION */}
         <section className="px-8 lg:px-16 pb-32">
-          <div className="bg-[#8B1538] rounded-3xl p-16 flex flex-col items-center text-center overflow-hidden relative">
+          <div className="bg-[var(--color-brand)] rounded-3xl p-16 flex flex-col items-center text-center overflow-hidden relative">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
             <h2 className="text-4xl lg:text-5xl font-bold text-white mb-8 max-w-2xl leading-tight relative z-10">
               Sua jornada para o lar perfeito começa com uma conversa.
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 relative z-10">
-              {wa ? (
+              {waURL ? (
                 <a
-                  href={`https://wa.me/${wa.replace(/\D/g, '')}?text=${waText}`}
+                  href={waURL}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-10 py-5 bg-white text-[#8B1538] font-bold rounded-xl hover:bg-gray-100 transition-all"
+                  className="px-10 py-5 bg-white text-[var(--color-brand)] font-bold rounded-xl hover:bg-gray-100 transition-all"
                 >
                   Falar com Corretor
                 </a>
               ) : tel ? (
                 <a
                   href={`tel:${tel}`}
-                  className="px-10 py-5 bg-white text-[#8B1538] font-bold rounded-xl hover:bg-gray-100 transition-all"
+                  className="px-10 py-5 bg-white text-[var(--color-brand)] font-bold rounded-xl hover:bg-gray-100 transition-all"
                 >
                   {tel}
                 </a>
