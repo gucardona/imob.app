@@ -1,0 +1,4 @@
+ALTER TABLE configuracao ADD COLUMN hero_titulo TEXT NOT NULL DEFAULT '';
+ALTER TABLE configuracao ADD COLUMN hero_subtitulo TEXT NOT NULL DEFAULT '';
+ALTER TABLE configuracao ADD COLUMN cta_texto TEXT NOT NULL DEFAULT '';
+ALTER TABLE configuracao ADD COLUMN cta_link TEXT NOT NULL DEFAULT '';

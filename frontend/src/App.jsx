@@ -5,25 +5,43 @@ import { setTheme } from './utils'
 import Home from './pages/Home'
 import List from './pages/List'
 import Detail from './pages/Detail'
+import PublicSkeleton from './components/PublicSkeleton'
 
 const AdminApp = lazy(() => import('./admin/AdminRouter'))
 
+// Apply theme from server-injected config before first React render
+if (window.__CFG__) setTheme(window.__CFG__)
+
 export default function App() {
-  const [cfg, setCfg] = useState(null)
+  const [cfg, setCfg] = useState(window.__CFG__ ?? null)
+  const [cfgReady, setCfgReady] = useState(false)
 
   useEffect(() => {
-    getConfiguracao().then(data => {
-      setCfg(data)
-      setTheme(data)
-    })
+    getConfiguracao()
+      .then(data => {
+        setCfg(data)
+        setTheme(data)
+        document.title = data?.NomeImobiliaria || 'Imóveis'
+        if (data?.LogoPath) {
+          let link = document.querySelector("link[rel~='icon']")
+          if (!link) {
+            link = document.createElement('link')
+            link.rel = 'icon'
+            document.head.appendChild(link)
+          }
+          link.type = 'image/png'
+          link.href = `/uploads/${data.LogoPath}`
+        }
+      })
+      .finally(() => setCfgReady(true))
   }, [])
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home cfg={cfg} />} />
-        <Route path="/imoveis" element={<List cfg={cfg} />} />
-        <Route path="/imoveis/:slug" element={<Detail cfg={cfg} />} />
+        <Route path="/" element={cfgReady ? <Home cfg={cfg} /> : <PublicSkeleton />} />
+        <Route path="/imoveis" element={cfgReady ? <List cfg={cfg} /> : <PublicSkeleton />} />
+        <Route path="/imoveis/:slug" element={cfgReady ? <Detail cfg={cfg} /> : <PublicSkeleton />} />
         <Route
           path="/admin/*"
           element={

@@ -23,14 +23,14 @@ export default function Card({ imovel }) {
         <div className="absolute top-4 right-4">
           <button
             onClick={e => { e.preventDefault(); e.stopPropagation() }}
-            className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-[#8B1538] transition-colors"
+            className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-[var(--color-brand)] transition-colors"
           >
             <iconify-icon icon="lucide:heart"></iconify-icon>
           </button>
         </div>
 
         <div className="absolute bottom-4 left-4">
-          <span className="px-3 py-1 bg-[#8B1538] text-white text-[10px] font-bold uppercase tracking-widest rounded-sm">
+          <span className="px-3 py-1 bg-[var(--color-brand)] text-white text-[10px] font-bold uppercase tracking-widest rounded-sm">
             {label}
           </span>
         </div>
@@ -39,7 +39,7 @@ export default function Card({ imovel }) {
       <div className="space-y-2">
         <div className="flex justify-between items-start gap-4">
           <h3 className="text-xl font-bold tracking-tight line-clamp-1">{imovel.Titulo}</h3>
-          <span className="text-[#8B1538] font-bold flex-shrink-0">{price}</span>
+          <span className="text-[var(--color-brand)] font-bold flex-shrink-0">{price}</span>
         </div>
         <p className="text-sm text-gray-400 font-medium">
           {imovel.Bairro}, {imovel.Cidade}

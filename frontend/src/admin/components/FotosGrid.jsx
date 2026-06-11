@@ -34,7 +34,7 @@ export default function FotosGrid({ imovelID, fotos, onChange }) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex items-center gap-1.5 text-xs font-bold text-[#8B1538] hover:underline"
+          className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand)] hover:underline"
         >
           <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
           Adicionar fotos
@@ -53,7 +53,7 @@ export default function FotosGrid({ imovelID, fotos, onChange }) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="w-full border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center text-gray-400 hover:border-[#8B1538] hover:text-[#8B1538] transition-colors"
+          className="w-full border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center text-gray-400 hover:border-[var(--color-brand)] hover:text-[var(--color-brand)] transition-colors"
         >
           <iconify-icon icon="lucide:image-plus" class="text-3xl mb-2 block mx-auto"></iconify-icon>
           <span className="text-sm font-medium">Clique para adicionar fotos</span>
@@ -68,7 +68,7 @@ export default function FotosGrid({ imovelID, fotos, onChange }) {
                 className="w-full h-full object-cover"
               />
               {f.Principal && (
-                <span className="absolute top-2 left-2 text-[10px] uppercase tracking-widest font-bold bg-[#8B1538] text-white px-2 py-0.5 rounded-sm">
+                <span className="absolute top-2 left-2 text-[10px] uppercase tracking-widest font-bold bg-[var(--color-brand)] text-white px-2 py-0.5 rounded-sm">
                   Principal
                 </span>
               )}
@@ -77,7 +77,7 @@ export default function FotosGrid({ imovelID, fotos, onChange }) {
                   <button
                     type="button"
                     onClick={() => handlePrincipal(f.ID)}
-                    className="text-[10px] uppercase tracking-widest font-bold bg-white text-[#8B1538] px-3 py-1.5 rounded-lg"
+                    className="text-[10px] uppercase tracking-widest font-bold bg-white text-[var(--color-brand)] px-3 py-1.5 rounded-lg"
                   >
                     Principal
                   </button>

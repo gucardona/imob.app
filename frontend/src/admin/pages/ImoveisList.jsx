@@ -54,7 +54,7 @@ export default function ImoveisList() {
         </div>
         <Link
           to="/admin/imoveis/novo"
-          className="flex items-center gap-2 bg-[#8B1538] hover:bg-[#6D112B] text-white px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95"
+          className="flex items-center gap-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-dark)] text-white px-5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95"
         >
           <iconify-icon icon="lucide:plus" class="text-base"></iconify-icon>
           <span className="hidden sm:inline">Novo Imóvel</span>
@@ -76,7 +76,7 @@ export default function ImoveisList() {
           <p className="text-sm mb-6">Nenhum imóvel cadastrado ainda.</p>
           <Link
             to="/admin/imoveis/novo"
-            className="text-sm font-bold text-[#8B1538] hover:underline"
+            className="text-sm font-bold text-[var(--color-brand)] hover:underline"
           >
             Cadastrar primeiro imóvel
           </Link>
@@ -93,7 +93,7 @@ export default function ImoveisList() {
                   <h3 className="font-bold text-gray-900 tracking-tight truncate">{im.Titulo}</h3>
                   <StatusBadge status={im.Status} />
                   {im.Destaque && (
-                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#8B1538] bg-[rgba(139,21,56,0.08)] px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-brand)] bg-[var(--color-brand-light)] px-2 py-0.5 rounded-full">
                       Destaque
                     </span>
                   )}
@@ -105,7 +105,7 @@ export default function ImoveisList() {
                   {' / '}
                   <span className="capitalize">{im.Finalidade}</span>
                 </p>
-                <p className="text-[#8B1538] font-bold text-sm mt-1">
+                <p className="text-[var(--color-brand)] font-bold text-sm mt-1">
                   {formatPrice(im.Preco, im.Finalidade)}
                 </p>
               </div>
@@ -116,15 +116,15 @@ export default function ImoveisList() {
                   title={im.Destaque ? 'Remover destaque' : 'Marcar como destaque'}
                   className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
                     im.Destaque
-                      ? 'bg-[rgba(139,21,56,0.08)] text-[#8B1538]'
-                      : 'bg-gray-100 text-gray-400 hover:text-[#8B1538]'
+                      ? 'bg-[var(--color-brand-light)] text-[var(--color-brand)]'
+                      : 'bg-gray-100 text-gray-400 hover:text-[var(--color-brand)]'
                   }`}
                 >
                   <iconify-icon icon={im.Destaque ? 'lucide:star' : 'lucide:star'} class="text-base"></iconify-icon>
                 </button>
                 <Link
                   to={`/admin/imoveis/${im.ID}/editar`}
-                  className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 hover:text-[#8B1538] transition-colors"
+                  className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 hover:text-[var(--color-brand)] transition-colors"
                   title="Editar"
                 >
                   <iconify-icon icon="lucide:pencil" class="text-base"></iconify-icon>

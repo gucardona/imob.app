@@ -18,7 +18,7 @@ function Pill({ active, onClick, children }) {
       onClick={onClick}
       className={`px-5 py-2 rounded-full text-sm font-bold transition-colors whitespace-nowrap ${
         active
-          ? 'bg-[#8B1538] text-white'
+          ? 'bg-[var(--color-brand)] text-white'
           : 'bg-[#F5F5F5] text-gray-600 hover:bg-gray-200'
       }`}
     >

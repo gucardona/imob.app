@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { getImovel, createImovel, updateImovel } from '../api.js'
+import { getImovel, createImovel, updateImovel, uploadFotos } from '../api.js'
 import FotosGrid from '../components/FotosGrid.jsx'
 
 const EMPTY = {
@@ -28,6 +28,7 @@ export default function ImovelForm() {
 
   const [form, setForm] = useState(EMPTY)
   const [fotos, setFotos] = useState([])
+  const [pendingPhotos, setPendingPhotos] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -75,9 +76,18 @@ export default function ImovelForm() {
       VagasGaragem: parseInt(form.VagasGaragem) || 0,
     }
     try {
-      if (isEdit) await updateImovel(id, body)
-      else await createImovel(body)
-      navigate('/admin/imoveis')
+      if (isEdit) {
+        await updateImovel(id, body)
+        navigate('/admin/imoveis')
+      } else {
+        const created = await createImovel(body)
+        if (pendingPhotos.length > 0) {
+          const fd = new FormData()
+          for (const f of pendingPhotos) fd.append('fotos', f)
+          await uploadFotos(created.ID, fd).catch(() => {})
+        }
+        navigate(`/admin/imoveis/${created.ID}/editar`)
+      }
     } catch {
       setError('Erro ao salvar imóvel.')
     } finally {
@@ -92,7 +102,7 @@ export default function ImovelForm() {
       <div className="flex items-center gap-3 mb-8">
         <Link
           to="/admin/imoveis"
-          className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-[#8B1538] transition-colors custom-shadow"
+          className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-[var(--color-brand)] transition-colors custom-shadow"
         >
           <iconify-icon icon="lucide:arrow-left" class="text-base"></iconify-icon>
         </Link>
@@ -186,7 +196,7 @@ export default function ImovelForm() {
             <div
               onClick={() => set('Destaque', !form.Destaque)}
               className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${
-                form.Destaque ? 'bg-[#8B1538]' : 'bg-gray-200'
+                form.Destaque ? 'bg-[var(--color-brand)]' : 'bg-gray-200'
               }`}
             >
               <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${form.Destaque ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -195,12 +205,13 @@ export default function ImovelForm() {
           </label>
         </Section>
 
-        {/* Fotos — apenas no modo edição */}
-        {isEdit && (
-          <Section title="Fotos">
-            <FotosGrid imovelID={parseInt(id)} fotos={fotos} onChange={setFotos} />
-          </Section>
-        )}
+        {/* Fotos */}
+        <Section title="Fotos">
+          {isEdit
+            ? <FotosGrid imovelID={parseInt(id)} fotos={fotos} onChange={setFotos} />
+            : <PendingFotos files={pendingPhotos} onChange={setPendingPhotos} />
+          }
+        </Section>
 
         {error && (
           <p className="text-sm text-red-500 font-medium">{error}</p>
@@ -210,9 +221,11 @@ export default function ImovelForm() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-[#8B1538] hover:bg-[#6D112B] text-white px-8 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
+            className="bg-[var(--color-brand)] hover:bg-[var(--color-brand-dark)] text-white px-8 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
           >
-            {saving ? 'Salvando…' : 'Salvar'}
+            {saving
+              ? (pendingPhotos.length > 0 ? 'Salvando e enviando fotos…' : 'Salvando…')
+              : 'Salvar'}
           </button>
           <button
             type="button"
@@ -223,6 +236,76 @@ export default function ImovelForm() {
           </button>
         </div>
       </form>
+    </div>
+  )
+}
+
+function PendingFotos({ files, onChange }) {
+  const fileRef = useRef(null)
+
+  const previews = useMemo(
+    () => files.map(f => URL.createObjectURL(f)),
+    [files],
+  )
+
+  useEffect(() => {
+    return () => previews.forEach(url => URL.revokeObjectURL(url))
+  }, [previews])
+
+  function handleAdd(e) {
+    const added = Array.from(e.target.files || [])
+    if (added.length) onChange(prev => [...prev, ...added])
+    e.target.value = ''
+  }
+
+  function handleRemove(idx) {
+    onChange(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-semibold text-gray-500">
+          {files.length} foto{files.length !== 1 ? 's' : ''} selecionada{files.length !== 1 ? 's' : ''}
+        </p>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand)] hover:underline"
+        >
+          <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
+          Adicionar fotos
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleAdd} />
+      </div>
+
+      {files.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="w-full border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center text-gray-400 hover:border-[var(--color-brand)] hover:text-[var(--color-brand)] transition-colors"
+        >
+          <iconify-icon icon="lucide:image-plus" class="text-3xl mb-2 block mx-auto"></iconify-icon>
+          <span className="text-sm font-medium">Clique para adicionar fotos</span>
+        </button>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {previews.map((url, idx) => (
+            <div key={idx} className="relative group rounded-2xl overflow-hidden bg-gray-100 aspect-video">
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => handleRemove(idx)}
+                  className="w-8 h-8 bg-red-500 text-white rounded-lg flex items-center justify-center"
+                >
+                  <iconify-icon icon="lucide:trash-2" class="text-sm"></iconify-icon>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

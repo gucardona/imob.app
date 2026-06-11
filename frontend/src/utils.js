@@ -1,3 +1,32 @@
+const DEFAULT_MSG_PADRAO = 'Olá! Vim pelo site e gostaria de receber ajuda para encontrar um imóvel. Poderia me auxiliar?'
+const DEFAULT_MSG_IMOVEL = 'Olá! Vim pelo site e gostaria de receber mais informações sobre este imóvel.\n\nImóvel: {property_title}\nCódigo: {property_code}\nLink: {property_url}'
+
+export function buildWhatsappURL(number, template, vars = {}) {
+  if (!number) return null
+  let msg = template || DEFAULT_MSG_PADRAO
+  for (const [key, val] of Object.entries(vars)) {
+    msg = msg.replaceAll(`{${key}}`, val ?? '')
+  }
+  const num = number.replace(/\D/g, '')
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+}
+
+export function getWAGenericURL(cfg) {
+  return buildWhatsappURL(
+    cfg?.Whatsapp,
+    cfg?.MsgWhatsappPadrao || DEFAULT_MSG_PADRAO,
+  )
+}
+
+export function getWAImovelURL(cfg, imovel) {
+  const template = cfg?.MsgWhatsappImovel || DEFAULT_MSG_IMOVEL
+  return buildWhatsappURL(cfg?.Whatsapp, template, {
+    property_title: imovel?.Titulo ?? '',
+    property_code: imovel?.Slug ?? '',
+    property_url: typeof window !== 'undefined' ? window.location.href : '',
+  })
+}
+
 export function formatPrice(preco, finalidade) {
   const formatted = Number(preco).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
   return finalidade === 'aluguel' ? `R$ ${formatted}/mês` : `R$ ${formatted}`
@@ -55,4 +84,5 @@ export function setTheme(cfg) {
   const g = parseInt(brand.slice(3, 5), 16)
   const b = parseInt(brand.slice(5, 7), 16)
   document.documentElement.style.setProperty('--color-brand-light', `rgba(${r}, ${g}, ${b}, 0.1)`)
+  document.documentElement.style.setProperty('--color-secondary', cfg?.CorSecundaria || '#1A1A1A')
 }

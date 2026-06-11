@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login, getMe } from '../api.js'
 import { useAuth } from '../AuthContext.jsx'
+import { getConfiguracao } from '../../api.js'
 
 export default function Login() {
   const { admin, setAdmin } = useAuth()
@@ -10,10 +11,15 @@ export default function Login() {
   const [senha, setSenha] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [cfg, setCfg] = useState(null)
 
   useEffect(() => {
     if (admin) navigate('/admin/imoveis', { replace: true })
   }, [admin, navigate])
+
+  useEffect(() => {
+    getConfiguracao().then(data => setCfg(data))
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -37,10 +43,18 @@ export default function Login() {
     <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-8 justify-center">
-          <div className="w-8 h-8 bg-[#8B1538] flex items-center justify-center rounded-sm">
-            <iconify-icon icon="lucide:layout-dashboard" class="text-white text-base"></iconify-icon>
-          </div>
-          <span className="text-xl font-bold tracking-tight uppercase">Admin</span>
+          {cfg?.LogoPath ? (
+            <img src={`/uploads/${cfg.LogoPath}`} alt={cfg.NomeImobiliaria || 'Logo'} className="h-10 w-auto object-contain" />
+          ) : (
+            <>
+              <div className="w-8 h-8 bg-[var(--color-brand)] flex items-center justify-center rounded-sm">
+                <iconify-icon icon="lucide:layout-dashboard" class="text-white text-base"></iconify-icon>
+              </div>
+              <span className="text-xl font-bold tracking-tight uppercase">
+                {cfg?.NomeImobiliaria || 'Admin'}
+              </span>
+            </>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl p-8 custom-shadow border border-gray-100">
@@ -78,7 +92,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#8B1538] hover:bg-[#6D112B] text-white rounded-xl py-3 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 mt-2"
+              className="w-full bg-[var(--color-brand)] hover:bg-[var(--color-brand-dark)] text-white rounded-xl py-3 text-sm font-bold transition-all active:scale-95 disabled:opacity-50 mt-2"
             >
               {loading ? 'Entrando…' : 'Entrar'}
             </button>

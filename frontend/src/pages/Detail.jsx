@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getImovel } from '../api'
-import { formatPrice } from '../utils'
+import { formatPrice, getWAImovelURL } from '../utils'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -36,7 +36,7 @@ export default function Detail({ cfg }) {
     return (
       <div className="min-h-screen bg-white">
         <Header cfg={cfg} />
-        <div className="pt-20 animate-pulse">
+        <div className="pt-16 sm:pt-20 animate-pulse">
           <div className="h-[480px] bg-gray-100 w-full" />
           <div className="max-w-6xl mx-auto px-8 lg:px-16 py-12 space-y-4">
             <div className="h-8 bg-gray-100 rounded w-1/2" />
@@ -51,11 +51,11 @@ export default function Detail({ cfg }) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         <Header cfg={cfg} />
-        <div className="flex-1 pt-20 flex items-center justify-center">
+        <div className="flex-1 pt-16 sm:pt-20 flex items-center justify-center">
           <div className="text-center">
             <iconify-icon icon="lucide:building-2" className="text-6xl text-gray-200 mb-4 block mx-auto"></iconify-icon>
             <p className="text-gray-400 mb-4">Imóvel não encontrado.</p>
-            <Link to="/imoveis" className="text-sm font-bold text-[#8B1538] hover:underline">
+            <Link to="/imoveis" className="text-sm font-bold text-[var(--color-brand)] hover:underline">
               Ver todos os imóveis
             </Link>
           </div>
@@ -65,21 +65,20 @@ export default function Detail({ cfg }) {
   }
 
   const { imovel, fotos } = data
-  const wa = cfg?.Whatsapp
   const tel = cfg?.Telefone
   const price = formatPrice(imovel.Preco, imovel.Finalidade)
   const pricePerM2 =
     imovel.AreaM2 > 0 && imovel.Finalidade === 'venda'
       ? `R$ ${Math.round(imovel.Preco / imovel.AreaM2).toLocaleString('pt-BR')}/m²`
       : null
-  const waText = encodeURIComponent(`Olá! Tenho interesse no imóvel: ${imovel.Titulo}`)
+  const waURL = getWAImovelURL(cfg, imovel)
   const isAluguel = imovel.Finalidade === 'aluguel'
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Header cfg={cfg} />
 
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-16 sm:pt-20">
         {/* GALLERY */}
         {fotos.length > 0 && (
           <div className="bg-[#1A1A1A]">
@@ -98,7 +97,7 @@ export default function Detail({ cfg }) {
                       key={f.ID}
                       onClick={() => setActivePhoto(i)}
                       className={`flex-shrink-0 h-16 w-24 rounded-lg overflow-hidden transition-all ${
-                        i === activePhoto ? 'opacity-100 ring-2 ring-[#8B1538] ring-offset-2 ring-offset-[#1A1A1A]' : 'opacity-40 hover:opacity-70'
+                        i === activePhoto ? 'opacity-100 ring-2 ring-[var(--color-brand)] ring-offset-2 ring-offset-[#1A1A1A]' : 'opacity-40 hover:opacity-70'
                       }`}
                     >
                       <img src={`/uploads/${f.CaminhoThumb}`} alt="" className="w-full h-full object-cover" />
@@ -126,7 +125,7 @@ export default function Detail({ cfg }) {
               <div className="flex flex-wrap gap-2 mb-6">
                 <span
                   className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-sm text-white"
-                  style={{ background: isAluguel ? '#555' : '#8B1538' }}
+                  style={{ background: isAluguel ? '#555' : 'var(--color-brand)' }}
                 >
                   {isAluguel ? 'Aluguel' : 'Venda'}
                 </span>
@@ -163,18 +162,18 @@ export default function Detail({ cfg }) {
 
             {/* Contact card */}
             <div>
-              <div className="bg-white rounded-2xl p-8 border border-gray-100 sticky top-24 custom-shadow">
-                <p className="text-3xl font-bold tracking-tight text-[#8B1538] mb-1">{price}</p>
+              <div className="bg-white rounded-2xl p-8 border border-gray-100 sticky top-20 custom-shadow">
+                <p className="text-3xl font-bold tracking-tight text-[var(--color-brand)] mb-1">{price}</p>
                 {pricePerM2 && <p className="text-sm text-gray-400 mb-8">{pricePerM2}</p>}
                 {!pricePerM2 && <div className="mb-8" />}
 
                 <div className="space-y-3 mb-6">
-                  {wa && (
+                  {waURL && (
                     <a
-                      href={`https://wa.me/${wa.replace(/\D/g, '')}?text=${waText}`}
+                      href={waURL}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center justify-center gap-3 w-full bg-[#8B1538] hover:bg-[#6D112B] text-white py-4 rounded-xl font-bold transition-all active:scale-95"
+                      className="flex items-center justify-center gap-3 w-full bg-[var(--color-brand)] hover:bg-[var(--color-brand-dark)] text-white py-4 rounded-xl font-bold transition-all active:scale-95"
                     >
                       <iconify-icon icon="lucide:message-circle" className="text-xl"></iconify-icon>
                       Chamar no WhatsApp
@@ -191,7 +190,6 @@ export default function Detail({ cfg }) {
                   )}
                 </div>
 
-                <p className="text-xs text-gray-400 text-center">Atendimento seg–sáb, 9h às 18h</p>
               </div>
             </div>
           </div>

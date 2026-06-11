@@ -69,7 +69,7 @@ export default function List({ cfg }) {
     <div className="min-h-screen flex flex-col">
       <Header cfg={cfg} />
 
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-16 sm:pt-20">
         <FilterPills filters={filters} onChange={handlePillChange} />
 
         <div className="max-w-7xl mx-auto px-8 lg:px-16 py-12 flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
@@ -87,7 +87,7 @@ export default function List({ cfg }) {
             />
             <button
               type="submit"
-              className="px-6 py-3 bg-[#8B1538] hover:bg-[#6D112B] text-white rounded-xl text-sm font-bold transition-all active:scale-95"
+              className="px-6 py-3 bg-[var(--color-brand)] hover:bg-[var(--color-brand-dark)] text-white rounded-xl text-sm font-bold transition-all active:scale-95"
             >
               Buscar
             </button>
@@ -105,7 +105,7 @@ export default function List({ cfg }) {
               <p className="text-sm mb-4">Nenhum imóvel encontrado com esses filtros.</p>
               <button
                 onClick={() => setSearchParams({})}
-                className="text-sm font-bold text-[#8B1538] hover:underline"
+                className="text-sm font-bold text-[var(--color-brand)] hover:underline"
               >
                 Limpar filtros
               </button>
