@@ -99,3 +99,22 @@ export function updateConfig(formData) {
     body: formData,
   })
 }
+
+export function resetBranding() {
+  return apiFetch('/api/admin/configuracao/reset-branding', { method: 'POST' })
+}
+
+export function removeLogo() {
+  return apiFetch('/api/admin/configuracao/remove-logo', { method: 'POST' })
+}
+
+export function uploadHeroImage(formData) {
+  return apiFetch('/api/admin/configuracao/hero-image', {
+    method: 'POST',
+    body: formData,
+  })
+}
+
+export function removeHeroImage() {
+  return apiFetch('/api/admin/configuracao/remove-hero-image', { method: 'POST' })
+}
