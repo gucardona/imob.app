@@ -18,7 +18,9 @@ import (
 	"github.com/gucardona/imob.app/internal/repo"
 )
 
-const maxUploadBytes = 32 << 20 // 32 MiB
+const maxUploadBytes = 32 << 20  // 32 MiB — fotos de imóveis
+const maxLogoBytes   = 2 << 20   // 2 MiB  — logo
+const maxHeroImageBytes = 5 << 20  // 5 MiB — hero image
 
 // dummyHash equalises login timing for unknown-email attempts.
 var dummyHash, _ = auth.HashPassword("dummy-constant-timing")
@@ -376,26 +378,33 @@ func (h adminAPIHandlers) configUpdate(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 11<<20)
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, maxLogoBytes+1<<20)
+	if err := r.ParseMultipartForm(maxLogoBytes); err != nil {
 		if err2 := r.ParseForm(); err2 != nil {
 			writeJSONError(w, "invalid form", http.StatusBadRequest)
 			return
 		}
 	}
 	cfg := repo.Configuracao{
-		NomeImobiliaria: r.FormValue("nome_imobiliaria"),
-		CorPrimaria:     r.FormValue("cor_primaria"),
-		CorSecundaria:   r.FormValue("cor_secundaria"),
-		Endereco:        r.FormValue("endereco"),
-		Telefone:        r.FormValue("telefone"),
-		Whatsapp:        r.FormValue("whatsapp"),
-		Email:           r.FormValue("email"),
-		InstagramURL:    r.FormValue("instagram_url"),
-		TextoSobre:      r.FormValue("texto_sobre"),
-		TextoHome:       r.FormValue("texto_home"),
-		HeroImageURL:    r.FormValue("hero_image_url"),
-		LogoPath:        existing.LogoPath,
+		NomeImobiliaria:   r.FormValue("nome_imobiliaria"),
+		CorPrimaria:       r.FormValue("cor_primaria"),
+		CorSecundaria:     r.FormValue("cor_secundaria"),
+		Endereco:          r.FormValue("endereco"),
+		Telefone:          r.FormValue("telefone"),
+		Whatsapp:          r.FormValue("whatsapp"),
+		Email:             r.FormValue("email"),
+		InstagramURL:      r.FormValue("instagram_url"),
+		TextoSobre:        r.FormValue("texto_sobre"),
+		HeroImageURL:      r.FormValue("hero_image_url"),
+		HeroTitulo:        r.FormValue("hero_titulo"),
+		HeroSubtitulo:     r.FormValue("hero_subtitulo"),
+		CtaTexto:          r.FormValue("cta_texto"),
+		CtaLink:           r.FormValue("cta_link"),
+		MsgWhatsappPadrao: r.FormValue("msg_whatsapp_padrao"),
+		MsgWhatsappImovel: r.FormValue("msg_whatsapp_imovel"),
+		LogoPath:          existing.LogoPath,
+		HeroMode:          r.FormValue("hero_mode"),
+		HeroImagePath:     existing.HeroImagePath,
 	}
 	file, _, err := r.FormFile("logo")
 	if err == nil {
@@ -419,17 +428,55 @@ func (h adminAPIHandlers) configUpdate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, cfg)
 }
 
+func (h adminAPIHandlers) configResetBranding(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	existing, err := h.cfg.Get(ctx)
+	if err != nil && !errors.Is(err, repo.ErrNotFound) {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	existing.CorPrimaria = "#8B1538"
+	existing.CorSecundaria = ""
+	if err := h.cfg.Update(ctx, existing); err != nil {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, existing)
+}
+
+func (h adminAPIHandlers) configRemoveLogo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	existing, err := h.cfg.Get(ctx)
+	if err != nil && !errors.Is(err, repo.ErrNotFound) {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	if existing.LogoPath != "" {
+		os.Remove(filepath.Join(h.uploadsDir, existing.LogoPath))
+	}
+	os.Remove(filepath.Join(h.uploadsDir, "logo", "logo.jpg"))
+	existing.LogoPath = ""
+	if err := h.cfg.Update(ctx, existing); err != nil {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, existing)
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 func parseIDPathValue(r *http.Request, name string) (int64, error) {
 	return strconv.ParseInt(r.PathValue(name), 10, 64)
 }
 
-// saveLogo decodes image data, resizes to max 400 px wide, saves as JPEG.
-func saveLogo(uploadsDir string, data []byte) (string, error) {
+// saveHeroImage decodes image data, resizes to max 2400 px wide, saves as JPEG.
+func saveHeroImage(uploadsDir string, data []byte) (string, error) {
+	if len(data) > maxHeroImageBytes {
+		return "", fmt.Errorf("imagem muito grande: máximo 5 MB")
+	}
 	ct := http.DetectContentType(data)
 	switch ct {
-	case "image/jpeg", "image/png", "image/gif":
+	case "image/jpeg", "image/png", "image/gif", "image/webp":
 	default:
 		return "", fmt.Errorf("tipo de imagem não suportado: %s", ct)
 	}
@@ -437,16 +484,45 @@ func saveLogo(uploadsDir string, data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if img.Bounds().Dx() > 400 {
-		img = imaging.Resize(img, 400, 0, imaging.Lanczos)
+	if img.Bounds().Dx() > 2400 {
+		img = imaging.Resize(img, 2400, 0, imaging.Lanczos)
+	}
+	destDir := filepath.Join(uploadsDir, "hero")
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		return "", err
+	}
+	dest := filepath.Join(destDir, "hero.jpg")
+	if err := imaging.Save(img, dest); err != nil {
+		return "", err
+	}
+	return "hero/hero.jpg", nil
+}
+
+// saveLogo decodes image data, resizes to max 600 px wide, saves as PNG to preserve transparency.
+func saveLogo(uploadsDir string, data []byte) (string, error) {
+	if len(data) > maxLogoBytes {
+		return "", fmt.Errorf("logo muito grande: máximo 2 MB")
+	}
+	ct := http.DetectContentType(data)
+	switch ct {
+	case "image/jpeg", "image/png", "image/gif", "image/webp":
+	default:
+		return "", fmt.Errorf("tipo de imagem não suportado: %s", ct)
+	}
+	img, err := imaging.Decode(bytes.NewReader(data), imaging.AutoOrientation(true))
+	if err != nil {
+		return "", err
+	}
+	if img.Bounds().Dx() > 600 {
+		img = imaging.Resize(img, 600, 0, imaging.Lanczos)
 	}
 	destDir := filepath.Join(uploadsDir, "logo")
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return "", err
 	}
-	dest := filepath.Join(destDir, "logo.jpg")
-	if err := imaging.Save(img, dest, imaging.JPEGQuality(85)); err != nil {
+	dest := filepath.Join(destDir, "logo.png")
+	if err := imaging.Save(img, dest); err != nil {
 		return "", err
 	}
-	return "logo/logo.jpg", nil
+	return "logo/logo.png", nil
 }
