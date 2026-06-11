@@ -463,6 +463,60 @@ func (h adminAPIHandlers) configRemoveLogo(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, existing)
 }
 
+func (h adminAPIHandlers) configHeroImageUpload(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	existing, err := h.cfg.Get(ctx)
+	if err != nil && !errors.Is(err, repo.ErrNotFound) {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxHeroImageBytes+1<<20)
+	if err := r.ParseMultipartForm(maxHeroImageBytes); err != nil {
+		writeJSONError(w, "files too large", http.StatusBadRequest)
+		return
+	}
+	file, _, err := r.FormFile("hero_image")
+	if err != nil {
+		writeJSONError(w, "missing hero_image field", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		writeJSONError(w, "bad file", http.StatusBadRequest)
+		return
+	}
+	heroPath, err := saveHeroImage(h.uploadsDir, data)
+	if err != nil {
+		writeJSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	existing.HeroImagePath = heroPath
+	if err := h.cfg.Update(ctx, existing); err != nil {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]string{"HeroImagePath": heroPath})
+}
+
+func (h adminAPIHandlers) configRemoveHeroImage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	existing, err := h.cfg.Get(ctx)
+	if err != nil && !errors.Is(err, repo.ErrNotFound) {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	if existing.HeroImagePath != "" {
+		os.Remove(filepath.Join(h.uploadsDir, existing.HeroImagePath))
+	}
+	existing.HeroImagePath = ""
+	if err := h.cfg.Update(ctx, existing); err != nil {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]string{})
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 func parseIDPathValue(r *http.Request, name string) (int64, error) {
