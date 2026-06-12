@@ -80,7 +80,7 @@ export default function List({ cfg }) {
           <form onSubmit={handleSearch} className="flex gap-3">
             <input
               type="text"
-              placeholder="Cidade, bairro, tipo, descrição…"
+              placeholder="Faça sua busca..."
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               className="border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400 w-72 placeholder-gray-300"

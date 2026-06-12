@@ -138,7 +138,7 @@ export default function Home({ cfg }) {
                 <label className="block text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Busca</label>
                 <input
                   type="text"
-                  placeholder="Cidade, bairro, tipo, descrição…"
+                  placeholder="Faça sua busca..."
                   value={q}
                   onChange={e => setQ(e.target.value)}
                   className="w-full text-sm font-medium focus:outline-none placeholder-gray-300"
