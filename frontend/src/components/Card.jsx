@@ -20,15 +20,6 @@ export default function Card({ imovel }) {
           </div>
         )}
 
-        <div className="absolute top-4 right-4">
-          <button
-            onClick={e => { e.preventDefault(); e.stopPropagation() }}
-            className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-[var(--color-brand)] transition-colors"
-          >
-            <iconify-icon icon="lucide:heart"></iconify-icon>
-          </button>
-        </div>
-
         <div className="absolute bottom-4 left-4">
           <span className="px-3 py-1 bg-[var(--color-brand)] text-white text-[10px] font-bold uppercase tracking-widest rounded-sm">
             {label}

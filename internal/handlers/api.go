@@ -42,34 +42,27 @@ func (h *apiHandlers) configuracao(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, cfg)
 }
 
-// imovelListItem embeds Imovel and adds the resolved thumbnail URL.
-type imovelListItem struct {
-	repo.Imovel
-	ThumbURL string `json:"ThumbURL"`
-}
-
 func (h *apiHandlers) imovelList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	filter := repo.ImovelFilter{
 		Finalidade:   q.Get("finalidade"),
 		Tipo:         q.Get("tipo"),
 		Cidade:       q.Get("cidade"),
+		Q:            q.Get("q"),
 		OnlyDestaque: q.Get("destaque") == "1",
 	}
+
 	list, err := h.imoveis.ListPublic(r.Context(), filter)
 	if err != nil {
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
 		return
 	}
-	result := make([]imovelListItem, len(list))
-	for i, im := range list {
-		item := imovelListItem{Imovel: im}
-		if f, err := h.fotos.GetPrincipal(r.Context(), im.ID); err == nil {
-			item.ThumbURL = "/uploads/" + f.CaminhoThumb
-		}
-		result[i] = item
+
+	if list == nil {
+		list = []repo.Imovel{}
 	}
-	writeJSON(w, result)
+
+	writeJSON(w, list)
 }
 
 type imovelDetailResp struct {

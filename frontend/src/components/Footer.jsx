@@ -59,9 +59,9 @@ export default function Footer({ cfg }) {
             <div className="flex flex-col gap-3.5">
               <h4 className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 mb-1">Contato</h4>
               {telefone && (
-                <a href={`tel:${telefone}`} className="flex items-center gap-3 text-sm text-gray-300 hover:text-white transition-colors group">
+                <a href={`tel:${telefone.replace(/\D/g, '')}`} className="flex items-center gap-3 text-sm text-gray-300 hover:text-white transition-colors group">
                   <iconify-icon icon="lucide:phone" className="text-sm text-gray-500 group-hover:text-white flex-shrink-0 transition-colors"></iconify-icon>
-                  {telefone}
+                  {telefone.replace(/\D/g, '').replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3')}
                 </a>
               )}
               {waURL && (

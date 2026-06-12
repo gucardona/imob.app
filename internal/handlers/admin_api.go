@@ -18,9 +18,9 @@ import (
 	"github.com/gucardona/imob.app/internal/repo"
 )
 
-const maxUploadBytes = 32 << 20  // 32 MiB — fotos de imóveis
-const maxLogoBytes   = 2 << 20   // 2 MiB  — logo
-const maxHeroImageBytes = 5 << 20  // 5 MiB — hero image
+const maxUploadBytes = 32 << 20   // 32 MiB — fotos de imóveis
+const maxLogoBytes = 2 << 20      // 2 MiB  — logo
+const maxHeroImageBytes = 5 << 20 // 5 MiB — hero image
 
 // dummyHash equalises login timing for unknown-email attempts.
 var dummyHash, _ = auth.HashPassword("dummy-constant-timing")
@@ -189,12 +189,12 @@ func (h adminAPIHandlers) imovelUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	imovel := repo.Imovel{
-		ID:           id,
-		Titulo:       body.Titulo, Descricao: body.Descricao, Tipo: body.Tipo,
-		Finalidade:   body.Finalidade, Cidade: body.Cidade, Bairro: body.Bairro,
-		Endereco:     body.Endereco, Preco: body.Preco, AreaM2: body.AreaM2,
-		Quartos:      body.Quartos, Banheiros: body.Banheiros, VagasGaragem: body.VagasGaragem,
-		Status:       body.Status, Destaque: body.Destaque,
+		ID:     id,
+		Titulo: body.Titulo, Descricao: body.Descricao, Tipo: body.Tipo,
+		Finalidade: body.Finalidade, Cidade: body.Cidade, Bairro: body.Bairro,
+		Endereco: body.Endereco, Preco: body.Preco, AreaM2: body.AreaM2,
+		Quartos: body.Quartos, Banheiros: body.Banheiros, VagasGaragem: body.VagasGaragem,
+		Status: body.Status, Destaque: body.Destaque,
 	}
 	if err := h.imoveis.Update(r.Context(), imovel); err != nil {
 		writeJSONError(w, "internal", http.StatusInternalServerError)
@@ -414,6 +414,9 @@ func (h adminAPIHandlers) configUpdate(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, "bad logo", http.StatusBadRequest)
 			return
 		}
+		if existing.LogoPath != "" {
+			_ = os.Remove(filepath.Join(h.uploadsDir, existing.LogoPath))
+		}
 		logoPath, err := saveLogo(h.uploadsDir, data)
 		if err != nil {
 			writeJSONError(w, "bad logo", http.StatusInternalServerError)
@@ -486,6 +489,9 @@ func (h adminAPIHandlers) configHeroImageUpload(w http.ResponseWriter, r *http.R
 		writeJSONError(w, "bad file", http.StatusBadRequest)
 		return
 	}
+	if existing.HeroImagePath != "" {
+		_ = os.Remove(filepath.Join(h.uploadsDir, existing.HeroImagePath))
+	}
 	heroPath, err := saveHeroImage(h.uploadsDir, data)
 	if err != nil {
 		writeJSONError(w, err.Error(), http.StatusBadRequest)
@@ -545,14 +551,17 @@ func saveHeroImage(uploadsDir string, data []byte) (string, error) {
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return "", err
 	}
-	dest := filepath.Join(destDir, "hero.jpg")
+
+	fileName := fmt.Sprintf("hero-%d.jpg", time.Now().UnixNano())
+	dest := filepath.Join(destDir, fileName)
+
 	if err := imaging.Save(img, dest); err != nil {
 		return "", err
 	}
-	return "hero/hero.jpg", nil
+	return "hero/" + fileName, nil
 }
 
-// saveLogo decodes image data, resizes to max 600 px wide, saves as PNG to preserve transparency.
+// saveLogo decodes image data, resizes to max 600 px wide, saves as PNG.
 func saveLogo(uploadsDir string, data []byte) (string, error) {
 	if len(data) > maxLogoBytes {
 		return "", fmt.Errorf("logo muito grande: máximo 2 MB")
@@ -574,9 +583,12 @@ func saveLogo(uploadsDir string, data []byte) (string, error) {
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return "", err
 	}
-	dest := filepath.Join(destDir, "logo.png")
+
+	fileName := fmt.Sprintf("logo-%d.png", time.Now().UnixNano())
+	dest := filepath.Join(destDir, fileName)
+
 	if err := imaging.Save(img, dest); err != nil {
 		return "", err
 	}
-	return "logo/logo.png", nil
+	return "logo/" + fileName, nil
 }

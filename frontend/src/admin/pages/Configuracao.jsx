@@ -260,7 +260,7 @@ export default function Configuracao() {
                     className="h-11 w-14 border border-gray-200 rounded-xl cursor-pointer p-1"
                   />
                   <input
-                    value={fields.cor_secundaria}
+                    value={fields.cor_secundaria || '#1A1A1A'}
                     onChange={e => set('cor_secundaria', e.target.value)}
                     className={`${inp} flex-1`}
                     placeholder="#1A1A1A"
@@ -346,10 +346,10 @@ export default function Configuracao() {
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Telefone">
-              <input value={fields.telefone} onChange={e => set('telefone', e.target.value)} className={inp} placeholder="(48) 9999-9999" />
+              <input value={fields.telefone} onChange={e => set('telefone', e.target.value)} className={inp} placeholder="5199999999" />
             </Field>
             <Field label="WhatsApp">
-              <input value={fields.whatsapp} onChange={e => set('whatsapp', e.target.value)} className={inp} placeholder="5548999999999" />
+              <input value={fields.whatsapp} onChange={e => set('whatsapp', e.target.value)} className={inp} placeholder="5551999999999" />
             </Field>
             <Field label="E-mail">
               <input type="email" value={fields.email} onChange={e => set('email', e.target.value)} className={inp} placeholder="contato@imobiliaria.com" />

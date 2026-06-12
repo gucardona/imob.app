@@ -6,7 +6,7 @@ import FotosGrid from '../components/FotosGrid.jsx'
 const EMPTY = {
   Titulo: '', Descricao: '', Tipo: 'casa', Finalidade: 'venda',
   Cidade: '', Bairro: '', Endereco: '',
-  Preco: '', AreaM2: '', Quartos: '', Banheiros: '', VagasGaragem: '',
+  Preco: 0, AreaM2: 0, Quartos: '', Banheiros: '', VagasGaragem: '',
   Status: 'disponivel', Destaque: false,
 }
 
@@ -86,7 +86,7 @@ export default function ImovelForm() {
           for (const f of pendingPhotos) fd.append('fotos', f)
           await uploadFotos(created.ID, fd).catch(() => {})
         }
-        navigate(`/admin/imoveis/${created.ID}/editar`)
+        navigate('/admin/imoveis')
       }
     } catch {
       setError('Erro ao salvar imóvel.')
@@ -111,15 +111,15 @@ export default function ImovelForm() {
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Informações básicas */}
         <Section title="Informações">
-          <Field label="Título">
+          <Field label="Título *">
             <input
+              required
               value={form.Titulo}
               onChange={e => set('Titulo', e.target.value)}
-              required
-              placeholder="Ex: Casa de praia em Jurerê"
+              placeholder="Ex: Casa no centro de Montenegro"
               className={inp}
             />
           </Field>
@@ -152,14 +152,14 @@ export default function ImovelForm() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Cidade">
-              <input value={form.Cidade} onChange={e => set('Cidade', e.target.value)} className={inp} placeholder="Ex: Florianópolis" />
+            <Field label="Cidade *">
+              <input required value={form.Cidade} onChange={e => set('Cidade', e.target.value)} className={inp} placeholder="Ex: Montenegro" />
             </Field>
-            <Field label="Bairro">
-              <input value={form.Bairro} onChange={e => set('Bairro', e.target.value)} className={inp} placeholder="Ex: Jurerê" />
+            <Field label="Bairro *">
+              <input required value={form.Bairro} onChange={e => set('Bairro', e.target.value)} className={inp} placeholder="Ex: Centro" />
             </Field>
-            <Field label="Endereço">
-              <input value={form.Endereco} onChange={e => set('Endereco', e.target.value)} className={inp} placeholder="Ex: Av. Beira Mar, 100" />
+            <Field label="Endereço *">
+              <input required value={form.Endereco} onChange={e => set('Endereco', e.target.value)} className={inp} placeholder="Ex: R. Exemplo, 100" />
             </Field>
           </div>
         </Section>
@@ -168,10 +168,10 @@ export default function ImovelForm() {
         <Section title="Detalhes">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Field label="Preço (R$)">
-              <input type="number" step="1" min="0" value={form.Preco} onChange={e => set('Preco', e.target.value)} className={inp} placeholder="0" />
+              <CentavosInput value={form.Preco} onChange={v => set('Preco', v)} className={inp} />
             </Field>
             <Field label="Área (m²)">
-              <input type="number" step="0.01" min="0" value={form.AreaM2} onChange={e => set('AreaM2', e.target.value)} className={inp} placeholder="0" />
+              <CentavosInput value={form.AreaM2} onChange={v => set('AreaM2', v)} className={inp} />
             </Field>
             <Field label="Quartos">
               <input type="number" min="0" value={form.Quartos} onChange={e => set('Quartos', e.target.value)} className={inp} placeholder="0" />
@@ -307,6 +307,48 @@ function PendingFotos({ files, onChange }) {
         </div>
       )}
     </div>
+  )
+}
+
+function CentavosInput({ value, onChange, className }) {
+  const [digits, setDigits] = useState(() => {
+    const n = parseFloat(value)
+    return isNaN(n) ? '' : Math.round(n * 100).toString()
+  })
+
+  function format(d) {
+    if (!d) return ''
+    const padded = d.padStart(3, '0')
+    const intPart = padded.slice(0, -2)
+    const decPart = padded.slice(-2)
+    return (parseInt(intPart) || 0).toLocaleString('pt-BR') + ',' + decPart
+  }
+
+  function handleKeyDown(e) {
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault()
+      const next = (digits + e.key).replace(/^0+/, '') || '0'
+      if (next.length > 13) return
+      setDigits(next)
+      onChange(parseInt(next) / 100)
+    } else if (e.key === 'Backspace') {
+      e.preventDefault()
+      const next = digits.slice(0, -1)
+      setDigits(next)
+      onChange(next ? parseInt(next) / 100 : 0)
+    }
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={format(digits)}
+      placeholder="0,00"
+      onChange={() => {}}
+      onKeyDown={handleKeyDown}
+      className={className}
+    />
   )
 }
 

@@ -60,38 +60,52 @@ export default function FotosGrid({ imovelID, fotos, onChange }) {
         </button>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {fotos.map(f => (
-            <div key={f.ID} className="relative group rounded-2xl overflow-hidden bg-gray-100 aspect-video">
-              <img
-                src={`/uploads/${f.CaminhoThumb}`}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-              {f.Principal && (
-                <span className="absolute top-2 left-2 text-[10px] uppercase tracking-widest font-bold bg-[var(--color-brand)] text-white px-2 py-0.5 rounded-sm">
-                  Principal
-                </span>
-              )}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
-                {!f.Principal && (
+          {fotos.map(f => {
+            // Cobre qualquer formato de JSON que o Go esteja a cuspir (PascalCase ou snake_case)
+            const id = f.ID || f.id;
+            const isPrincipal = f.Principal || f.principal;
+            const thumbPath = f.CaminhoThumb || f.caminho_thumb || '';
+
+            return (
+              <div key={id} className="relative group rounded-2xl overflow-hidden bg-gray-100 aspect-video">
+                <img
+                  src={`/uploads/${thumbPath}`}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error("❌ O navegador tentou carregar esta imagem mas falhou:", e.target.src, f);
+                    // Coloca uma imagem cinza para o layout não ficar feio enquanto você resolve
+                    e.target.src = 'https://placehold.co/400x225/eeeeee/999999?text=Falha+no+Caminho';
+                  }}
+                />
+                
+                {isPrincipal && (
+                  <span className="absolute top-2 left-2 text-[10px] uppercase tracking-widest font-bold bg-[var(--color-brand)] text-white px-2 py-0.5 rounded-sm">
+                    Principal
+                  </span>
+                )}
+                
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                  {!isPrincipal && (
+                    <button
+                      type="button"
+                      onClick={() => handlePrincipal(id)}
+                      className="text-[10px] uppercase tracking-widest font-bold bg-white text-[var(--color-brand)] px-3 py-1.5 rounded-lg"
+                    >
+                      Principal
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => handlePrincipal(f.ID)}
-                    className="text-[10px] uppercase tracking-widest font-bold bg-white text-[var(--color-brand)] px-3 py-1.5 rounded-lg"
+                    onClick={() => handleDelete(id)}
+                    className="w-8 h-8 bg-red-500 text-white rounded-lg flex items-center justify-center"
                   >
-                    Principal
+                    <iconify-icon icon="lucide:trash-2" class="text-sm"></iconify-icon>
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(f.ID)}
-                  className="w-8 h-8 bg-red-500 text-white rounded-lg flex items-center justify-center"
-                >
-                  <iconify-icon icon="lucide:trash-2" class="text-sm"></iconify-icon>
-                </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

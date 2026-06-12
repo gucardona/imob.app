@@ -9,22 +9,23 @@ import (
 )
 
 type Imovel struct {
-	ID           int64
-	Slug         string
-	Titulo       string
-	Descricao    string
-	Tipo         string
-	Finalidade   string
-	Cidade       string
-	Bairro       string
-	Endereco     string
-	Preco        float64
-	AreaM2       float64
-	Quartos      int
-	Banheiros    int
-	VagasGaragem int
-	Status       string
-	Destaque     bool
+	ID           int64   `json:"ID"`
+	Slug         string  `json:"Slug"`
+	Titulo       string  `json:"Titulo"`
+	Descricao    string  `json:"Descricao"`
+	Tipo         string  `json:"Tipo"`
+	Finalidade   string  `json:"Finalidade"`
+	Cidade       string  `json:"Cidade"`
+	Bairro       string  `json:"Bairro"`
+	Endereco     string  `json:"Endereco"`
+	Preco        float64 `json:"Preco"`
+	AreaM2       float64 `json:"AreaM2"`
+	Quartos      int     `json:"Quartos"`
+	Banheiros    int     `json:"Banheiros"`
+	VagasGaragem int     `json:"VagasGaragem"`
+	Status       string  `json:"Status"`
+	Destaque     bool    `json:"Destaque"`
+	ThumbURL     string  `json:"ThumbURL"`
 }
 
 type ImovelRepo struct {
@@ -38,7 +39,8 @@ func NewImovelRepo(conn *sql.DB) ImovelRepo {
 func (r ImovelRepo) List(ctx context.Context) ([]Imovel, error) {
 	rows, err := r.conn.QueryContext(ctx, `
 		SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
-		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque
+		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
+		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
 		FROM imoveis
 		ORDER BY criado_em DESC
 	`)
@@ -61,7 +63,8 @@ func (r ImovelRepo) List(ctx context.Context) ([]Imovel, error) {
 func (r ImovelRepo) Get(ctx context.Context, id int64) (Imovel, error) {
 	row := r.conn.QueryRowContext(ctx, `
 		SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
-		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque
+		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
+		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
 		FROM imoveis
 		WHERE id = ?
 	`, id)
@@ -129,27 +132,37 @@ type rowScanner interface {
 
 func scanImovel(row rowScanner) (Imovel, error) {
 	var imovel Imovel
+	var thumb sql.NullString
+
 	err := row.Scan(
 		&imovel.ID, &imovel.Slug, &imovel.Titulo, &imovel.Descricao, &imovel.Tipo, &imovel.Finalidade,
 		&imovel.Cidade, &imovel.Bairro, &imovel.Endereco, &imovel.Preco, &imovel.AreaM2,
 		&imovel.Quartos, &imovel.Banheiros, &imovel.VagasGaragem, &imovel.Status, &imovel.Destaque,
+		&thumb,
 	)
+
+	if thumb.Valid && thumb.String != "" {
+		imovel.ThumbURL = "/uploads/" + thumb.String
+	}
+
 	return imovel, err
 }
 
-// ImovelFilter restricts ListPublic results. Zero value = no filter.
 type ImovelFilter struct {
-	Tipo         string // "" = any
-	Finalidade   string // "" = any
-	Cidade       string // "" = any; partial LIKE match
-	OnlyDestaque bool   // if true, only destaque=1
+	Tipo         string
+	Finalidade   string
+	Cidade       string
+	Q            string
+	OnlyDestaque bool
 }
 
 func (r ImovelRepo) GetBySlug(ctx context.Context, slug string) (Imovel, error) {
 	row := r.conn.QueryRowContext(ctx, `
 		SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
-		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque
-		FROM imoveis WHERE slug = ?
+		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
+		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
+		FROM imoveis
+		WHERE slug = ?
 	`, slug)
 	imovel, err := scanImovel(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -160,8 +173,10 @@ func (r ImovelRepo) GetBySlug(ctx context.Context, slug string) (Imovel, error) 
 
 func (r ImovelRepo) ListPublic(ctx context.Context, f ImovelFilter) ([]Imovel, error) {
 	q := `SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
-	             preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque
-	      FROM imoveis WHERE status = 'disponivel'`
+	             preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
+	             (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
+	      FROM imoveis
+	      WHERE status = 'disponivel'`
 	var args []any
 	if f.Tipo != "" {
 		q += ` AND tipo = ?`
@@ -174,6 +189,11 @@ func (r ImovelRepo) ListPublic(ctx context.Context, f ImovelFilter) ([]Imovel, e
 	if f.Cidade != "" {
 		q += ` AND cidade LIKE ?`
 		args = append(args, "%"+f.Cidade+"%")
+	}
+	if f.Q != "" {
+		like := "%" + f.Q + "%"
+		q += ` AND (titulo LIKE ? OR cidade LIKE ? OR bairro LIKE ? OR endereco LIKE ?)`
+		args = append(args, like, like, like, like)
 	}
 	if f.OnlyDestaque {
 		q += ` AND destaque = 1`
@@ -206,14 +226,12 @@ var accentReplacer = strings.NewReplacer(
 	"ç", "c", "ñ", "n",
 )
 
-// Slugify converts free text into a URL-safe slug: lowercase ASCII,
-// accents stripped, runs of non-alphanumeric characters collapsed to single hyphens.
 func Slugify(s string) string {
 	s = strings.ToLower(s)
 	s = accentReplacer.Replace(s)
 
 	var b strings.Builder
-	lastWasHyphen := true // suppress leading hyphens
+	lastWasHyphen := true
 	for _, r := range s {
 		switch {
 		case unicode.IsLetter(r) && r <= unicode.MaxASCII, unicode.IsDigit(r):

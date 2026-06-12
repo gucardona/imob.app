@@ -63,26 +63,30 @@ export default function Home({ cfg }) {
       <main className="flex-1 pt-16 sm:pt-20">
         {/* HERO */}
         {heroMode === 'clean' ? (
-          <section className="relative pt-28 sm:pt-36 pb-24 px-8 lg:px-16 overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(160deg, #ffffff 0%, #f5f5f5 100%)' }} />
-            <div
-              className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-[0.08] pointer-events-none"
-              style={{ backgroundColor: 'var(--color-brand)' }}
-            />
-            <div className="relative max-w-4xl mx-auto text-center">
-              <div className="w-12 h-0.5 mx-auto mb-6 rounded-full" style={{ backgroundColor: 'var(--color-brand)' }} />
-              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 leading-tight mb-4">
+          <section className="relative w-full pt-20 pb-24 lg:pt-28 lg:pb-32 px-8 flex flex-col items-center justify-center text-center bg-[var(--color-brand)] overflow-hidden">
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/15 via-transparent to-black/25 pointer-events-none" />
+
+            <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col items-center">
+
+              {/* Headline with custom letter drop-shadow */}
+              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] mb-6 drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 {heroTitulo}
               </h1>
-              {heroSubtitulo && (
-                <p className="text-lg text-gray-500 mb-8 leading-snug">
+
+              {heroSubtitulo ? (
+                <p className="text-lg lg:text-xl text-white/90 font-medium max-w-2xl mb-10 leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
                   {heroSubtitulo}
                 </p>
+              ) : (
+                <p className="text-lg lg:text-xl text-white/90 font-medium max-w-2xl mb-10 leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                  Navegue por nossa seleção exclusiva de propriedades selecionadas em localizações privilegiadas.
+                </p>
               )}
+
               <a
                 href={ctaLink}
-                className="inline-flex items-center gap-2 text-white font-bold text-sm px-6 py-3 rounded-xl transition-all active:scale-95 hover:opacity-90"
-                style={{ backgroundColor: 'var(--color-brand)' }}
+                className="inline-flex items-center gap-2 bg-white text-[var(--color-brand)] font-bold text-sm sm:text-base px-10 py-4 rounded-xl hover:bg-gray-100 transition-all active:scale-95 shadow-xl shadow-black/20"
               >
                 {ctaTexto}
                 <iconify-icon icon="lucide:arrow-right" className="text-base"></iconify-icon>
@@ -93,7 +97,6 @@ export default function Home({ cfg }) {
           <section className="relative h-[75vh] w-full overflow-hidden">
             <img
               src={heroImage}
-              alt="Imóvel de luxo"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 hero-gradient" />
@@ -232,7 +235,7 @@ export default function Home({ cfg }) {
                 </a>
               ) : tel ? (
                 <a
-                  href={`tel:${tel}`}
+                  href={`tel:${tel.replace(/\D/g, '')}`}
                   className="px-10 py-5 bg-white text-[var(--color-brand)] font-bold rounded-xl hover:bg-gray-100 transition-all"
                 >
                   {tel}

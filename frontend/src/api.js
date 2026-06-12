@@ -14,6 +14,7 @@ export async function getImoveis(filter = {}) {
     if (filter.finalidade) params.set('finalidade', filter.finalidade)
     if (filter.tipo) params.set('tipo', filter.tipo)
     if (filter.cidade) params.set('cidade', filter.cidade)
+    if (filter.q) params.set('q', filter.q)
     if (filter.destaque) params.set('destaque', '1')
     const res = await fetch(`/api/imoveis?${params}`)
     if (!res.ok) return []

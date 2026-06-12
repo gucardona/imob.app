@@ -23,18 +23,18 @@ export default function List({ cfg }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [imoveis, setImoveis] = useState([])
   const [loading, setLoading] = useState(true)
-  const [cityInput, setCityInput] = useState(searchParams.get('cidade') || '')
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '')
 
   const filters = {
     finalidade: searchParams.get('finalidade') || '',
     tipo: searchParams.get('tipo') || '',
     cidade: searchParams.get('cidade') || '',
+    q: searchParams.get('q') || '',
   }
 
   useEffect(() => {
-    const cidade = searchParams.get('cidade') || ''
-    setCityInput(cidade)
-  }, [searchParams.get('cidade')])
+    setSearchInput(searchParams.get('q') || '')
+  }, [searchParams.get('q')])
 
   useEffect(() => {
     setLoading(true)
@@ -53,12 +53,12 @@ export default function List({ cfg }) {
     })
   }
 
-  function handleCitySearch(e) {
+  function handleSearch(e) {
     e.preventDefault()
     setSearchParams(prev => {
       const next = new URLSearchParams(prev)
-      if (cityInput.trim()) next.set('cidade', cityInput.trim())
-      else next.delete('cidade')
+      if (searchInput.trim()) next.set('q', searchInput.trim())
+      else next.delete('q')
       return next
     })
   }
@@ -77,13 +77,13 @@ export default function List({ cfg }) {
             <h1 className="text-4xl font-bold tracking-tight mb-2">Imóveis Disponíveis</h1>
             <p className="text-gray-500">{count} imóvel(eis) encontrado(s)</p>
           </div>
-          <form onSubmit={handleCitySearch} className="flex gap-3">
+          <form onSubmit={handleSearch} className="flex gap-3">
             <input
               type="text"
-              placeholder="Buscar por cidade..."
-              value={cityInput}
-              onChange={e => setCityInput(e.target.value)}
-              className="border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400 w-56 placeholder-gray-300"
+              placeholder="Buscar por nome, cidade, bairro..."
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              className="border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400 w-72 placeholder-gray-300"
             />
             <button
               type="submit"

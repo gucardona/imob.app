@@ -27,8 +27,34 @@ export function getWAImovelURL(cfg, imovel) {
   })
 }
 
+export function getEmailImovelURL(email, cfg, imovel) {
+  if (!email) return null
+  
+  const template = cfg?.MsgWhatsappImovel || DEFAULT_MSG_IMOVEL
+  let msg = template
+  
+  const vars = {
+    property_title: imovel?.Titulo ?? '',
+    property_code: imovel?.Slug ?? '',
+    property_url: typeof window !== 'undefined' ? window.location.href : '',
+  }
+  
+  for (const [key, val] of Object.entries(vars)) {
+    msg = msg.replaceAll(`{${key}}`, val ?? '')
+  }
+
+  const subject = `Interesse no imóvel: ${imovel?.Titulo ?? ''}`
+  
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`
+}
+
 export function formatPrice(preco, finalidade) {
-  const formatted = Number(preco).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  const valor = Number(preco);
+
+  if (valor === 0) {
+    return 'Consulte';
+  }
+  const formatted = valor.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
   return finalidade === 'aluguel' ? `R$ ${formatted}/mês` : `R$ ${formatted}`
 }
 

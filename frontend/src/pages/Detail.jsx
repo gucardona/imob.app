@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getImovel } from '../api'
-import { formatPrice, getWAImovelURL } from '../utils'
+import { formatPrice, getWAImovelURL, getEmailImovelURL } from '../utils'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -65,13 +65,14 @@ export default function Detail({ cfg }) {
   }
 
   const { imovel, fotos } = data
-  const tel = cfg?.Telefone
+  const email = cfg?.Email
   const price = formatPrice(imovel.Preco, imovel.Finalidade)
   const pricePerM2 =
     imovel.AreaM2 > 0 && imovel.Finalidade === 'venda'
       ? `R$ ${Math.round(imovel.Preco / imovel.AreaM2).toLocaleString('pt-BR')}/m²`
       : null
   const waURL = getWAImovelURL(cfg, imovel)
+  const emailURL = getEmailImovelURL(cfg?.Email, cfg, imovel)
   const isAluguel = imovel.Finalidade === 'aluguel'
 
   return (
@@ -179,13 +180,13 @@ export default function Detail({ cfg }) {
                       Chamar no WhatsApp
                     </a>
                   )}
-                  {tel && (
+                  {emailURL && (
                     <a
-                      href={`tel:${tel}`}
+                      href={emailURL}
                       className="flex items-center justify-center gap-3 w-full border border-gray-200 text-gray-700 hover:bg-gray-50 py-4 rounded-xl font-medium transition-colors"
                     >
-                      <iconify-icon icon="lucide:phone" className="text-xl"></iconify-icon>
-                      {tel}
+                      <iconify-icon icon="lucide:mail" className="text-xl"></iconify-icon>
+                      Enviar E-mail
                     </a>
                   )}
                 </div>

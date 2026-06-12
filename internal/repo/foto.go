@@ -7,13 +7,13 @@ import (
 )
 
 type Foto struct {
-	ID              int64
-	ImovelID        int64
-	CaminhoOriginal string
-	CaminhoThumb    string
-	CaminhoGrande   string
-	Principal       bool
-	Ordem           int
+	ID              int64  `json:"ID"`
+	ImovelID        int64  `json:"ImovelID"`
+	CaminhoOriginal string `json:"CaminhoOriginal"`
+	CaminhoThumb    string `json:"CaminhoThumb"`
+	CaminhoGrande   string `json:"CaminhoGrande"`
+	Principal       bool   `json:"Principal"`
+	Ordem           int    `json:"Ordem"`
 }
 
 type FotoRepo struct {
