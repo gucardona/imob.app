@@ -155,6 +155,50 @@ func TestFotoRepo_GetPrincipal_ReturnsPrincipalFoto(t *testing.T) {
 	}
 }
 
+func TestFotoRepo_GetByID_ReturnsFoto(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+	fotos := repo.NewFotoRepo(conn)
+
+	imovelID := createTestImovel(t, imoveis)
+	fotoID, err := fotos.Create(ctx, repo.Foto{
+		ImovelID:        imovelID,
+		CaminhoOriginal: "1/a-original.jpg",
+		CaminhoThumb:    "1/a-thumb.jpg",
+		CaminhoGrande:   "1/a-grande.jpg",
+		Ordem:           0,
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	got, err := fotos.GetByID(ctx, imovelID, fotoID)
+	if err != nil {
+		t.Fatalf("GetByID returned error: %v", err)
+	}
+	if got.ID != fotoID {
+		t.Errorf("expected fotoID %d, got %d", fotoID, got.ID)
+	}
+	if got.CaminhoOriginal != "1/a-original.jpg" {
+		t.Errorf("expected CaminhoOriginal %q, got %q", "1/a-original.jpg", got.CaminhoOriginal)
+	}
+}
+
+func TestFotoRepo_GetByID_NotFound(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+	fotos := repo.NewFotoRepo(conn)
+
+	imovelID := createTestImovel(t, imoveis)
+
+	_, err := fotos.GetByID(ctx, imovelID, 9999)
+	if !errors.Is(err, repo.ErrNotFound) {
+		t.Errorf("expected repo.ErrNotFound, got %v", err)
+	}
+}
+
 func TestFotoRepo_GetPrincipal_NotFoundWhenNoPrincipal(t *testing.T) {
 	conn := newTestDB(t)
 	ctx := context.Background()

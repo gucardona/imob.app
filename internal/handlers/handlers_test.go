@@ -475,6 +475,292 @@ func TestRouter_PublicImovelDetail_NotFound(t *testing.T) {
 	}
 }
 
+func setupAdminRouter(t *testing.T) (http.Handler, []*http.Cookie, *sql.DB) {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+	cfg := config.Config{SessionSecret: "test-secret", UploadsDir: t.TempDir()}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+	cookies := loginAsTestAdmin(t, conn, router)
+	return router, cookies, conn
+}
+
+func authedReq(t *testing.T, router http.Handler, cookies []*http.Cookie, method, target string, body io.Reader, ct string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, target, body)
+	if ct != "" {
+		req.Header.Set("Content-Type", ct)
+	}
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestRouter_AdminMe_ReturnsEmail(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+	rec := authedReq(t, router, cookies, http.MethodGet, "/api/admin/me", nil, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "admin@example.com") {
+		t.Errorf("expected email in response, got: %s", rec.Body.String())
+	}
+}
+
+func TestRouter_AdminLogout_Returns200(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+
+	rec := authedReq(t, router, cookies, http.MethodPost, "/api/admin/logout", nil, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected logout 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "ok") {
+		t.Errorf("expected ok in logout response, got: %s", rec.Body.String())
+	}
+}
+
+func TestRouter_AdminLogin_WrongPassword_Returns401(t *testing.T) {
+	router, _, conn := setupAdminRouter(t)
+	_ = conn
+
+	body, _ := json.Marshal(map[string]string{"email": "admin@example.com", "senha": "wrong-password"})
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 for wrong password, got %d", rec.Code)
+	}
+}
+
+func TestRouter_PublicConfiguracao_ReturnsJSON(t *testing.T) {
+	router := newTestRouter(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/configuracao", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("expected JSON content-type, got %q", ct)
+	}
+	if !strings.Contains(rec.Body.String(), "#1d4ed8") {
+		t.Errorf("expected default CorPrimaria in response, got: %s", rec.Body.String())
+	}
+}
+
+func TestRouter_AdminConfiguracao_GetAndUpdate(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+
+	getRec := authedReq(t, router, cookies, http.MethodGet, "/api/admin/configuracao", nil, "")
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("expected GET 200, got %d: %s", getRec.Code, getRec.Body.String())
+	}
+	if ct := getRec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("expected JSON content-type, got %q", ct)
+	}
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	_ = writer.WriteField("nome_imobiliaria", "Imobiliária Teste")
+	_ = writer.WriteField("cor_primaria", "#abcdef")
+	_ = writer.WriteField("hero_mode", "gradient")
+	writer.Close()
+
+	putRec := authedReq(t, router, cookies, http.MethodPut, "/api/admin/configuracao", &buf, writer.FormDataContentType())
+	if putRec.Code != http.StatusOK {
+		t.Fatalf("expected PUT 200, got %d: %s", putRec.Code, putRec.Body.String())
+	}
+	if !strings.Contains(putRec.Body.String(), "Imobiliária Teste") {
+		t.Errorf("expected NomeImobiliaria in response, got: %s", putRec.Body.String())
+	}
+}
+
+func TestRouter_AdminConfiguracao_UpdateWithLogo(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+
+	img := image.NewRGBA(image.Rect(0, 0, 150, 75))
+	var imgBuf bytes.Buffer
+	if err := jpeg.Encode(&imgBuf, img, &jpeg.Options{Quality: 80}); err != nil {
+		t.Fatalf("encoding logo JPEG: %v", err)
+	}
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	_ = writer.WriteField("nome_imobiliaria", "Logo Test")
+	part, err := writer.CreateFormFile("logo", "logo.jpg")
+	if err != nil {
+		t.Fatalf("creating form file: %v", err)
+	}
+	if _, err := part.Write(imgBuf.Bytes()); err != nil {
+		t.Fatalf("writing logo: %v", err)
+	}
+	writer.Close()
+
+	rec := authedReq(t, router, cookies, http.MethodPut, "/api/admin/configuracao", &buf, writer.FormDataContentType())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"logo/`) && !strings.Contains(rec.Body.String(), `logo/`) {
+		t.Errorf("expected LogoPath to be set after logo upload, got: %s", rec.Body.String())
+	}
+}
+
+func TestRouter_AdminConfiguracao_ResetBranding(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+
+	rec := authedReq(t, router, cookies, http.MethodPost, "/api/admin/configuracao/reset-branding", nil, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "#8B1538") {
+		t.Errorf("expected reset CorPrimaria #8B1538 in response, got: %s", rec.Body.String())
+	}
+}
+
+func TestRouter_AdminConfiguracao_RemoveLogo(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+
+	rec := authedReq(t, router, cookies, http.MethodPost, "/api/admin/configuracao/remove-logo", nil, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"LogoPath":""`) {
+		t.Errorf("expected empty LogoPath, got: %s", rec.Body.String())
+	}
+}
+
+func TestRouter_AdminConfiguracao_HeroImageUploadAndRemove(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+
+	img := image.NewRGBA(image.Rect(0, 0, 800, 600))
+	var imgBuf bytes.Buffer
+	if err := jpeg.Encode(&imgBuf, img, &jpeg.Options{Quality: 80}); err != nil {
+		t.Fatalf("encoding hero JPEG: %v", err)
+	}
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	part, err := writer.CreateFormFile("hero_image", "hero.jpg")
+	if err != nil {
+		t.Fatalf("creating form file: %v", err)
+	}
+	if _, err := part.Write(imgBuf.Bytes()); err != nil {
+		t.Fatalf("writing hero image: %v", err)
+	}
+	writer.Close()
+
+	uploadRec := authedReq(t, router, cookies, http.MethodPost, "/api/admin/configuracao/hero-image", &buf, writer.FormDataContentType())
+	if uploadRec.Code != http.StatusOK {
+		t.Fatalf("expected upload 200, got %d: %s", uploadRec.Code, uploadRec.Body.String())
+	}
+	if !strings.Contains(uploadRec.Body.String(), "hero/") {
+		t.Errorf("expected HeroImagePath to be set, got: %s", uploadRec.Body.String())
+	}
+
+	removeRec := authedReq(t, router, cookies, http.MethodPost, "/api/admin/configuracao/remove-hero-image", nil, "")
+	if removeRec.Code != http.StatusOK {
+		t.Fatalf("expected remove 200, got %d: %s", removeRec.Code, removeRec.Body.String())
+	}
+}
+
+func TestRouter_SPA_ServesIndexHTML(t *testing.T) {
+	router := newTestRouter(t)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("expected text/html content-type, got %q", ct)
+	}
+	if !strings.Contains(rec.Body.String(), "<html") {
+		t.Errorf("expected HTML in body")
+	}
+}
+
+func TestRouter_SPA_UnknownRouteServesIndexHTML(t *testing.T) {
+	router := newTestRouter(t)
+	req := httptest.NewRequest(http.MethodGet, "/imoveis/algum-slug", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 for SPA route, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "<html") {
+		t.Errorf("expected HTML for SPA fallback")
+	}
+}
+
+func TestRouter_AdminImovelGet_NotFound(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+	rec := authedReq(t, router, cookies, http.MethodGet, "/api/admin/imoveis/99999", nil, "")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
+	}
+}
+
+func TestRouter_PublicImoveis_FilterByQ(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open returned error: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("Migrate returned error: %v", err)
+	}
+	cfg := config.Config{SessionSecret: "test-secret", UploadsDir: t.TempDir()}
+	router := handlers.NewRouter(handlers.Deps{Conn: conn, Config: cfg})
+
+	ir := repo.NewImovelRepo(conn)
+	ctx := context.Background()
+
+	centro := samplePublicImovel()
+	centro.Titulo = "Casa no Centro"
+	centro.Bairro = "Centro"
+	if _, err := ir.Create(ctx, centro); err != nil {
+		t.Fatalf("Create centro returned error: %v", err)
+	}
+
+	praia := samplePublicImovel()
+	praia.Titulo = "Apartamento na Praia"
+	praia.Bairro = "Orla"
+	if _, err := ir.Create(ctx, praia); err != nil {
+		t.Fatalf("Create praia returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/imoveis?q=Centro", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Casa no Centro") {
+		t.Errorf("expected Centro result in body, got: %s", body)
+	}
+	if strings.Contains(body, "Apartamento na Praia") {
+		t.Errorf("expected Praia result to be filtered out, got: %s", body)
+	}
+}
+
 func uploadSampleFoto(t *testing.T, router http.Handler, cookies []*http.Cookie, imovelID int64) *httptest.ResponseRecorder {
 	t.Helper()
 

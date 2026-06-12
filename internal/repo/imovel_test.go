@@ -265,6 +265,114 @@ func TestImovelRepo_ListPublic_FilterByFinalidade(t *testing.T) {
 	}
 }
 
+func TestImovelRepo_Get_NotFound(t *testing.T) {
+	conn := newTestDB(t)
+	imoveis := repo.NewImovelRepo(conn)
+
+	_, err := imoveis.Get(context.Background(), 9999)
+	if !errors.Is(err, repo.ErrNotFound) {
+		t.Errorf("expected repo.ErrNotFound, got %v", err)
+	}
+}
+
+func TestImovelRepo_ListPublic_FilterByTipo(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+
+	casa := sampleImovel()
+	casa.Tipo = "casa"
+	if _, err := imoveis.Create(ctx, casa); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	apto := sampleImovel()
+	apto.Titulo = "Apartamento Centro"
+	apto.Tipo = "apartamento"
+	if _, err := imoveis.Create(ctx, apto); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	list, err := imoveis.ListPublic(ctx, repo.ImovelFilter{Tipo: "apartamento"})
+	if err != nil {
+		t.Fatalf("ListPublic returned error: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(list))
+	}
+	if list[0].Tipo != "apartamento" {
+		t.Errorf("expected tipo apartamento, got %q", list[0].Tipo)
+	}
+}
+
+func TestImovelRepo_ListPublic_FilterByCidade(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+
+	floripa := sampleImovel()
+	floripa.Cidade = "Florianópolis"
+	if _, err := imoveis.Create(ctx, floripa); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	porto := sampleImovel()
+	porto.Titulo = "Casa em Porto Alegre"
+	porto.Cidade = "Porto Alegre"
+	if _, err := imoveis.Create(ctx, porto); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	list, err := imoveis.ListPublic(ctx, repo.ImovelFilter{Cidade: "Porto"})
+	if err != nil {
+		t.Fatalf("ListPublic returned error: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(list))
+	}
+	if list[0].Cidade != "Porto Alegre" {
+		t.Errorf("expected cidade Porto Alegre, got %q", list[0].Cidade)
+	}
+}
+
+func TestImovelRepo_ListPublic_FilterByQ_MatchesTituloAndBairro(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+
+	byTitle := sampleImovel()
+	byTitle.Titulo = "Mansão Especial"
+	byTitle.Bairro = "Jurerê"
+	if _, err := imoveis.Create(ctx, byTitle); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	byBairro := sampleImovel()
+	byBairro.Titulo = "Casa Comum"
+	byBairro.Bairro = "Bairro Unico"
+	if _, err := imoveis.Create(ctx, byBairro); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	// search by title
+	list, err := imoveis.ListPublic(ctx, repo.ImovelFilter{Q: "Mansão"})
+	if err != nil {
+		t.Fatalf("ListPublic Q=Mansão returned error: %v", err)
+	}
+	if len(list) != 1 || list[0].Titulo != "Mansão Especial" {
+		t.Errorf("expected Mansão Especial, got %v", list)
+	}
+
+	// search by bairro
+	list, err = imoveis.ListPublic(ctx, repo.ImovelFilter{Q: "Unico"})
+	if err != nil {
+		t.Fatalf("ListPublic Q=Unico returned error: %v", err)
+	}
+	if len(list) != 1 || list[0].Titulo != "Casa Comum" {
+		t.Errorf("expected Casa Comum, got %v", list)
+	}
+}
+
 func TestImovelRepo_ListPublic_OnlyDestaque(t *testing.T) {
 	conn := newTestDB(t)
 	ctx := context.Background()

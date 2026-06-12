@@ -12,7 +12,7 @@ import (
 
 const (
 	thumbWidth  = 800
-	grandeWidth = 1600
+	grandeWidth = 1920
 	jpegQuality = 85
 )
 

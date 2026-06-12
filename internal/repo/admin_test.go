@@ -62,3 +62,35 @@ func TestAdminRepo_FindByEmail_ReturnsErrNotFound(t *testing.T) {
 		t.Errorf("expected repo.ErrNotFound, got %v", err)
 	}
 }
+
+func TestAdminRepo_FindByID_ReturnsAdmin(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	admins := repo.NewAdminRepo(conn)
+
+	id, err := admins.Create(ctx, "admin2@example.com", "hash2")
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	found, err := admins.FindByID(ctx, id)
+	if err != nil {
+		t.Fatalf("FindByID returned error: %v", err)
+	}
+	if found.ID != id {
+		t.Errorf("expected id %d, got %d", id, found.ID)
+	}
+	if found.Email != "admin2@example.com" {
+		t.Errorf("expected email %q, got %q", "admin2@example.com", found.Email)
+	}
+}
+
+func TestAdminRepo_FindByID_NotFound(t *testing.T) {
+	conn := newTestDB(t)
+	admins := repo.NewAdminRepo(conn)
+
+	_, err := admins.FindByID(context.Background(), 9999)
+	if !errors.Is(err, repo.ErrNotFound) {
+		t.Errorf("expected repo.ErrNotFound, got %v", err)
+	}
+}

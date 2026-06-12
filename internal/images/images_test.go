@@ -61,13 +61,13 @@ func TestSaveVariants_WritesOriginalThumbAndGrande(t *testing.T) {
 	}
 
 	thumbW, _ := decodeDimensions(t, filepath.Join(dir, filepath.Base(paths.Thumb)))
-	if thumbW != 400 {
-		t.Errorf("expected thumb width 400, got %d", thumbW)
+	if thumbW != 800 {
+		t.Errorf("expected thumb width 800, got %d", thumbW)
 	}
 
 	grandeW, _ := decodeDimensions(t, filepath.Join(dir, filepath.Base(paths.Grande)))
-	if grandeW != 1600 {
-		t.Errorf("expected grande width 1600, got %d", grandeW)
+	if grandeW != 1920 {
+		t.Errorf("expected grande width 1920, got %d", grandeW)
 	}
 }
 
@@ -83,6 +83,21 @@ func TestSaveVariants_DoesNotUpscaleSmallerImages(t *testing.T) {
 	thumbW, _ := decodeDimensions(t, filepath.Join(dir, filepath.Base(paths.Thumb)))
 	if thumbW != 300 {
 		t.Errorf("expected thumb to keep original width 300 (no upscale), got %d", thumbW)
+	}
+}
+
+func TestSaveVariants_OriginalPreservesSourceDimensions(t *testing.T) {
+	dir := t.TempDir()
+	data := sampleJPEG(t, 2000, 1333)
+
+	paths, err := images.SaveVariants(data, dir, "full-res")
+	if err != nil {
+		t.Fatalf("SaveVariants returned error: %v", err)
+	}
+
+	w, h := decodeDimensions(t, filepath.Join(dir, filepath.Base(paths.Original)))
+	if w != 2000 || h != 1333 {
+		t.Errorf("expected original 2000x1333, got %dx%d", w, h)
 	}
 }
 

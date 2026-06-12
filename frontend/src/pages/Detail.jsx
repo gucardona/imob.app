@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getImovel } from '../api'
 import { formatPrice, getWAImovelURL, getEmailImovelURL } from '../utils'
@@ -19,6 +19,7 @@ export default function Detail({ cfg }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activePhoto, setActivePhoto] = useState(0)
+  const [lightbox, setLightbox] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -31,6 +32,22 @@ export default function Detail({ cfg }) {
       setLoading(false)
     })
   }, [slug])
+
+  const fotos = data?.fotos ?? []
+
+  const prev = useCallback(() => setActivePhoto(i => (i - 1 + fotos.length) % fotos.length), [fotos.length])
+  const next = useCallback(() => setActivePhoto(i => (i + 1) % fotos.length), [fotos.length])
+
+  useEffect(() => {
+    if (!lightbox) return
+    function onKey(e) {
+      if (e.key === 'Escape') setLightbox(false)
+      if (e.key === 'ArrowLeft') prev()
+      if (e.key === 'ArrowRight') next()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightbox, prev, next])
 
   if (loading) {
     return (
@@ -64,7 +81,7 @@ export default function Detail({ cfg }) {
     )
   }
 
-  const { imovel, fotos } = data
+  const { imovel } = data
   const email = cfg?.Email
   const price = formatPrice(imovel.Preco, imovel.Finalidade)
   const pricePerM2 =
@@ -84,12 +101,22 @@ export default function Detail({ cfg }) {
         {fotos.length > 0 && (
           <div className="bg-[#1A1A1A]">
             <div className="max-w-6xl mx-auto">
-              <div className="h-[480px] overflow-hidden">
+              <div className="relative h-[480px] overflow-hidden group cursor-zoom-in" onClick={() => setLightbox(true)}>
                 <img
                   src={`/uploads/${fotos[activePhoto].CaminhoGrande}`}
                   alt={imovel.Titulo}
                   className="w-full h-full object-cover"
                 />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="bg-black/40 rounded-full p-3">
+                    <iconify-icon icon="lucide:expand" className="text-white text-2xl"></iconify-icon>
+                  </div>
+                </div>
+                {fotos.length > 1 && (
+                  <div className="absolute bottom-4 right-4 bg-black/50 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    {activePhoto + 1} / {fotos.length}
+                  </div>
+                )}
               </div>
               {fotos.length > 1 && (
                 <div className="flex gap-2 p-3 overflow-x-auto">
@@ -107,6 +134,51 @@ export default function Detail({ cfg }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* LIGHTBOX */}
+        {lightbox && fotos.length > 0 && (
+          <div
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+            onClick={() => setLightbox(false)}
+          >
+            <button
+              onClick={() => setLightbox(false)}
+              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+            >
+              <iconify-icon icon="lucide:x" className="text-2xl"></iconify-icon>
+            </button>
+
+            {fotos.length > 1 && (
+              <>
+                <button
+                  onClick={e => { e.stopPropagation(); prev() }}
+                  className="absolute left-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                >
+                  <iconify-icon icon="lucide:chevron-left" className="text-3xl"></iconify-icon>
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); next() }}
+                  className="absolute right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                >
+                  <iconify-icon icon="lucide:chevron-right" className="text-3xl"></iconify-icon>
+                </button>
+              </>
+            )}
+
+            <img
+              src={`/uploads/${fotos[activePhoto].CaminhoGrande}`}
+              alt={imovel.Titulo}
+              className="max-w-full max-h-full object-contain select-none"
+              onClick={e => e.stopPropagation()}
+            />
+
+            {fotos.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm font-medium">
+                {activePhoto + 1} / {fotos.length}
+              </div>
+            )}
           </div>
         )}
 
