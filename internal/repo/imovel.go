@@ -15,6 +15,7 @@ type Imovel struct {
 	Descricao    string  `json:"Descricao"`
 	Tipo         string  `json:"Tipo"`
 	Finalidade   string  `json:"Finalidade"`
+	Estado       string  `json:"Estado"`
 	Cidade       string  `json:"Cidade"`
 	Bairro       string  `json:"Bairro"`
 	Endereco     string  `json:"Endereco"`
@@ -38,7 +39,7 @@ func NewImovelRepo(conn *sql.DB) ImovelRepo {
 
 func (r ImovelRepo) List(ctx context.Context) ([]Imovel, error) {
 	rows, err := r.conn.QueryContext(ctx, `
-		SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
+		SELECT id, slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco,
 		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
 		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
 		FROM imoveis
@@ -62,7 +63,7 @@ func (r ImovelRepo) List(ctx context.Context) ([]Imovel, error) {
 
 func (r ImovelRepo) Get(ctx context.Context, id int64) (Imovel, error) {
 	row := r.conn.QueryRowContext(ctx, `
-		SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
+		SELECT id, slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco,
 		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
 		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
 		FROM imoveis
@@ -82,12 +83,12 @@ func (r ImovelRepo) Get(ctx context.Context, id int64) (Imovel, error) {
 func (r ImovelRepo) Create(ctx context.Context, imovel Imovel) (int64, error) {
 	result, err := r.conn.ExecContext(ctx, `
 		INSERT INTO imoveis (
-			slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
+			slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco,
 			preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		Slugify(imovel.Titulo), imovel.Titulo, imovel.Descricao, imovel.Tipo, imovel.Finalidade,
-		imovel.Cidade, imovel.Bairro, imovel.Endereco, imovel.Preco, imovel.AreaM2,
+		imovel.Estado, imovel.Cidade, imovel.Bairro, imovel.Endereco, imovel.Preco, imovel.AreaM2,
 		imovel.Quartos, imovel.Banheiros, imovel.VagasGaragem, imovel.Status, imovel.Destaque,
 	)
 	if err != nil {
@@ -100,13 +101,13 @@ func (r ImovelRepo) Update(ctx context.Context, imovel Imovel) error {
 	_, err := r.conn.ExecContext(ctx, `
 		UPDATE imoveis SET
 			slug = ?, titulo = ?, descricao = ?, tipo = ?, finalidade = ?,
-			cidade = ?, bairro = ?, endereco = ?, preco = ?, area_m2 = ?,
+			estado = ?, cidade = ?, bairro = ?, endereco = ?, preco = ?, area_m2 = ?,
 			quartos = ?, banheiros = ?, vagas_garagem = ?, status = ?, destaque = ?,
 			atualizado_em = datetime('now')
 		WHERE id = ?
 	`,
 		Slugify(imovel.Titulo), imovel.Titulo, imovel.Descricao, imovel.Tipo, imovel.Finalidade,
-		imovel.Cidade, imovel.Bairro, imovel.Endereco, imovel.Preco, imovel.AreaM2,
+		imovel.Estado, imovel.Cidade, imovel.Bairro, imovel.Endereco, imovel.Preco, imovel.AreaM2,
 		imovel.Quartos, imovel.Banheiros, imovel.VagasGaragem, imovel.Status, imovel.Destaque,
 		imovel.ID,
 	)
@@ -136,7 +137,7 @@ func scanImovel(row rowScanner) (Imovel, error) {
 
 	err := row.Scan(
 		&imovel.ID, &imovel.Slug, &imovel.Titulo, &imovel.Descricao, &imovel.Tipo, &imovel.Finalidade,
-		&imovel.Cidade, &imovel.Bairro, &imovel.Endereco, &imovel.Preco, &imovel.AreaM2,
+		&imovel.Estado, &imovel.Cidade, &imovel.Bairro, &imovel.Endereco, &imovel.Preco, &imovel.AreaM2,
 		&imovel.Quartos, &imovel.Banheiros, &imovel.VagasGaragem, &imovel.Status, &imovel.Destaque,
 		&thumb,
 	)
@@ -158,7 +159,7 @@ type ImovelFilter struct {
 
 func (r ImovelRepo) GetBySlug(ctx context.Context, slug string) (Imovel, error) {
 	row := r.conn.QueryRowContext(ctx, `
-		SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
+		SELECT id, slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco,
 		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
 		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
 		FROM imoveis
@@ -172,7 +173,7 @@ func (r ImovelRepo) GetBySlug(ctx context.Context, slug string) (Imovel, error) 
 }
 
 func (r ImovelRepo) ListPublic(ctx context.Context, f ImovelFilter) ([]Imovel, error) {
-	q := `SELECT id, slug, titulo, descricao, tipo, finalidade, cidade, bairro, endereco,
+	q := `SELECT id, slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco,
 	             preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
 	             (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
 	      FROM imoveis

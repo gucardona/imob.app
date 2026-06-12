@@ -14,6 +14,7 @@ func sampleImovel() repo.Imovel {
 		Descricao:    "Linda casa de três quartos.",
 		Tipo:         "casa",
 		Finalidade:   "venda",
+		Estado:       "SC",
 		Cidade:       "Florianópolis",
 		Bairro:       "Canasvieiras",
 		Endereco:     "Rua das Gaivotas, 100",

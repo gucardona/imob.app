@@ -5,10 +5,16 @@ import FotosGrid from '../components/FotosGrid.jsx'
 
 const EMPTY = {
   Titulo: '', Descricao: '', Tipo: 'casa', Finalidade: 'venda',
-  Cidade: '', Bairro: '', Endereco: '',
+  Estado: '', Cidade: '', Bairro: '', Endereco: '',
   Preco: 0, AreaM2: 0, Quartos: '', Banheiros: '', VagasGaragem: '',
   Status: 'disponivel', Destaque: false,
 }
+
+const BR_STATES = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
+  'MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN',
+  'RS','RO','RR','SC','SP','SE','TO',
+]
 
 function Skeleton() {
   return (
@@ -32,6 +38,8 @@ export default function ImovelForm() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [cep, setCep] = useState('')
+  const [cepStatus, setCepStatus] = useState('')
 
   useEffect(() => {
     if (!isEdit) return
@@ -42,6 +50,7 @@ export default function ImovelForm() {
           Descricao: Imovel.Descricao ?? '',
           Tipo: Imovel.Tipo ?? 'casa',
           Finalidade: Imovel.Finalidade ?? 'venda',
+          Estado: Imovel.Estado ?? '',
           Cidade: Imovel.Cidade ?? '',
           Bairro: Imovel.Bairro ?? '',
           Endereco: Imovel.Endereco ?? '',
@@ -61,6 +70,35 @@ export default function ImovelForm() {
 
   function set(field, value) {
     setForm(f => ({ ...f, [field]: value }))
+  }
+
+  async function handleCep(raw) {
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    const masked = digits.length > 5 ? digits.slice(0, 5) + '-' + digits.slice(5) : digits
+    setCep(masked)
+    if (digits.length < 8) {
+      setCepStatus('')
+      return
+    }
+    setCepStatus('loading')
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      const data = await res.json()
+      if (data.erro) {
+        setCepStatus('notfound')
+        return
+      }
+      setForm(f => ({
+        ...f,
+        Estado: data.uf ?? f.Estado,
+        Cidade: data.localidade ?? f.Cidade,
+        Bairro: data.bairro ?? f.Bairro,
+        Endereco: data.logradouro ?? f.Endereco,
+      }))
+      setCepStatus('ok')
+    } catch {
+      setCepStatus('error')
+    }
   }
 
   async function handleSubmit(e) {
@@ -151,17 +189,45 @@ export default function ImovelForm() {
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Field label="CEP">
+              <div className="relative">
+                <input
+                  value={cep}
+                  onChange={e => handleCep(e.target.value)}
+                  className={inp}
+                  placeholder="00000-000"
+                  maxLength={9}
+                  inputMode="numeric"
+                />
+                {cepStatus === 'loading' && (
+                  <iconify-icon icon="lucide:loader-circle" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-base animate-spin"></iconify-icon>
+                )}
+                {cepStatus === 'ok' && (
+                  <iconify-icon icon="lucide:check" class="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 text-base"></iconify-icon>
+                )}
+                {(cepStatus === 'notfound' || cepStatus === 'error') && (
+                  <iconify-icon icon="lucide:x" class="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-base"></iconify-icon>
+                )}
+              </div>
+              {cepStatus === 'notfound' && <p className="text-[10px] text-red-400 mt-1">CEP não encontrado.</p>}
+            </Field>
+            <Field label="Estado *">
+              <select required value={form.Estado} onChange={e => set('Estado', e.target.value)} className={inp}>
+                <option value="">UF</option>
+                {BR_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+              </select>
+            </Field>
             <Field label="Cidade *">
               <input required value={form.Cidade} onChange={e => set('Cidade', e.target.value)} className={inp} placeholder="Ex: Montenegro" />
             </Field>
             <Field label="Bairro *">
               <input required value={form.Bairro} onChange={e => set('Bairro', e.target.value)} className={inp} placeholder="Ex: Centro" />
             </Field>
-            <Field label="Endereço *">
-              <input required value={form.Endereco} onChange={e => set('Endereco', e.target.value)} className={inp} placeholder="Ex: R. Exemplo, 100" />
-            </Field>
           </div>
+          <Field label="Endereço *">
+            <input required value={form.Endereco} onChange={e => set('Endereco', e.target.value)} className={inp} placeholder="Ex: R. Exemplo, 100" />
+          </Field>
         </Section>
 
         {/* Detalhes */}
