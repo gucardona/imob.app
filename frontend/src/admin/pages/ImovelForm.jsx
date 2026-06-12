@@ -5,7 +5,7 @@ import FotosGrid from '../components/FotosGrid.jsx'
 
 const EMPTY = {
   Titulo: '', Descricao: '', Tipo: 'casa', Finalidade: 'venda',
-  Estado: '', Cidade: '', Bairro: '', Endereco: '',
+  Estado: '', Cidade: '', Bairro: '', Endereco: '', Numero: '',
   Preco: 0, AreaM2: 0, Quartos: '', Banheiros: '', VagasGaragem: '',
   Status: 'disponivel', Destaque: false,
 }
@@ -54,6 +54,7 @@ export default function ImovelForm() {
           Cidade: Imovel.Cidade ?? '',
           Bairro: Imovel.Bairro ?? '',
           Endereco: Imovel.Endereco ?? '',
+          Numero: Imovel.Numero ?? '',
           Preco: Imovel.Preco ?? '',
           AreaM2: Imovel.AreaM2 ?? '',
           Quartos: Imovel.Quartos ?? '',
@@ -210,7 +211,10 @@ export default function ImovelForm() {
                   <iconify-icon icon="lucide:x" class="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-base"></iconify-icon>
                 )}
               </div>
-              {cepStatus === 'notfound' && <p className="text-[10px] text-red-400 mt-1">CEP não encontrado.</p>}
+              {cepStatus === 'notfound'
+                ? <p className="text-[10px] text-red-400 mt-1">CEP não encontrado.</p>
+                : <p className="text-[10px] text-gray-400 mt-1">Preencherá o endereço automaticamente.</p>
+              }
             </Field>
             <Field label="Estado *">
               <select required value={form.Estado} onChange={e => set('Estado', e.target.value)} className={inp}>
@@ -225,9 +229,14 @@ export default function ImovelForm() {
               <input required value={form.Bairro} onChange={e => set('Bairro', e.target.value)} className={inp} placeholder="Ex: Centro" />
             </Field>
           </div>
-          <Field label="Endereço *">
-            <input required value={form.Endereco} onChange={e => set('Endereco', e.target.value)} className={inp} placeholder="Ex: R. Exemplo, 100" />
-          </Field>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <Field label="Endereço *" >
+              <input required value={form.Endereco} onChange={e => set('Endereco', e.target.value)} className={`${inp} sm:col-span-3`} placeholder="Ex: Rua das Flores" />
+            </Field>
+            <Field label="Número">
+              <input value={form.Numero} onChange={e => set('Numero', e.target.value)} className={inp} placeholder="Ex: 100" />
+            </Field>
+          </div>
         </Section>
 
         {/* Detalhes */}

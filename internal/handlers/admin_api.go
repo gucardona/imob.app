@@ -107,6 +107,7 @@ type imovelBody struct {
 	Cidade       string  `json:"Cidade"`
 	Bairro       string  `json:"Bairro"`
 	Endereco     string  `json:"Endereco"`
+	Numero       string  `json:"Numero"`
 	Preco        float64 `json:"Preco"`
 	AreaM2       float64 `json:"AreaM2"`
 	Quartos      int     `json:"Quartos"`
@@ -164,7 +165,7 @@ func (h adminAPIHandlers) imovelCreate(w http.ResponseWriter, r *http.Request) {
 	imovel := repo.Imovel{
 		Titulo: body.Titulo, Descricao: body.Descricao, Tipo: body.Tipo,
 		Finalidade: body.Finalidade, Estado: body.Estado, Cidade: body.Cidade, Bairro: body.Bairro,
-		Endereco: body.Endereco, Preco: body.Preco, AreaM2: body.AreaM2,
+		Endereco: body.Endereco, Numero: body.Numero, Preco: body.Preco, AreaM2: body.AreaM2,
 		Quartos: body.Quartos, Banheiros: body.Banheiros, VagasGaragem: body.VagasGaragem,
 		Status: body.Status, Destaque: body.Destaque,
 	}
@@ -194,7 +195,7 @@ func (h adminAPIHandlers) imovelUpdate(w http.ResponseWriter, r *http.Request) {
 		ID:     id,
 		Titulo: body.Titulo, Descricao: body.Descricao, Tipo: body.Tipo,
 		Finalidade: body.Finalidade, Estado: body.Estado, Cidade: body.Cidade, Bairro: body.Bairro,
-		Endereco: body.Endereco, Preco: body.Preco, AreaM2: body.AreaM2,
+		Endereco: body.Endereco, Numero: body.Numero, Preco: body.Preco, AreaM2: body.AreaM2,
 		Quartos: body.Quartos, Banheiros: body.Banheiros, VagasGaragem: body.VagasGaragem,
 		Status: body.Status, Destaque: body.Destaque,
 	}
