@@ -193,9 +193,9 @@ func (r ImovelRepo) ListPublic(ctx context.Context, f ImovelFilter) ([]Imovel, e
 		args = append(args, "%"+f.Cidade+"%")
 	}
 	if f.Q != "" {
-		like := "%" + f.Q + "%"
-		q += ` AND (titulo LIKE ? OR descricao LIKE ? OR tipo LIKE ? OR finalidade LIKE ?` +
-			` OR estado LIKE ? OR cidade LIKE ? OR bairro LIKE ? OR endereco LIKE ? OR numero LIKE ?)`
+		like := "%" + strings.ToLower(f.Q) + "%"
+		q += ` AND (LOWER(titulo) LIKE ? OR LOWER(descricao) LIKE ? OR LOWER(tipo) LIKE ? OR LOWER(finalidade) LIKE ?` +
+			` OR LOWER(estado) LIKE ? OR LOWER(cidade) LIKE ? OR LOWER(bairro) LIKE ? OR LOWER(endereco) LIKE ? OR LOWER(numero) LIKE ?)`
 		args = append(args, like, like, like, like, like, like, like, like, like)
 	}
 	if f.OnlyDestaque {
