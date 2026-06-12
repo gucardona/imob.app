@@ -5,7 +5,7 @@ const SOCIAL_LINKS = [
   { key: 'FacebookURL',  icon: 'mdi:facebook',  label: 'Facebook' },
   { key: 'LinkedinURL',  icon: 'mdi:linkedin',  label: 'LinkedIn' },
   { key: 'XURL',         icon: 'mdi:twitter',   label: 'X' },
-  { key: 'TiktokURL',    icon: 'mdi:tiktok',    label: 'TikTok' },
+  { key: 'TiktokURL',    icon: 'simple-icons:tiktok', label: 'TikTok' },
   { key: 'YoutubeURL',   icon: 'mdi:youtube',   label: 'YouTube' },
   { key: 'PinterestURL', icon: 'mdi:pinterest', label: 'Pinterest' },
   { key: 'WhatsappURL',  icon: 'mdi:whatsapp',  label: 'WhatsApp' },

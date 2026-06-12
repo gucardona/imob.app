@@ -375,7 +375,7 @@ export default function Configuracao() {
             <SocialField label="Facebook" icon="mdi:facebook" field="facebook_url" placeholder="https://facebook.com/suaimobiliaria" fields={fields} set={set} />
             <SocialField label="LinkedIn" icon="mdi:linkedin" field="linkedin_url" placeholder="https://linkedin.com/company/suaimobiliaria" fields={fields} set={set} />
             <SocialField label="X (Twitter)" icon="mdi:twitter" field="x_url" placeholder="https://x.com/suaimobiliaria" fields={fields} set={set} />
-            <SocialField label="TikTok" icon="mdi:tiktok" field="tiktok_url" placeholder="https://tiktok.com/@suaimobiliaria" fields={fields} set={set} />
+            <SocialField label="TikTok" icon="simple-icons:tiktok" field="tiktok_url" placeholder="https://tiktok.com/@suaimobiliaria" fields={fields} set={set} />
             <SocialField label="YouTube" icon="mdi:youtube" field="youtube_url" placeholder="https://youtube.com/@suaimobiliaria" fields={fields} set={set} />
             <SocialField label="Pinterest" icon="mdi:pinterest" field="pinterest_url" placeholder="https://pinterest.com/suaimobiliaria" fields={fields} set={set} />
             <SocialField label="WhatsApp" icon="mdi:whatsapp" field="whatsapp_url" placeholder="https://wa.me/5551999999999" fields={fields} set={set} />
