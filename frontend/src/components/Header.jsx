@@ -2,6 +2,18 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getWAGenericURL } from '../utils'
 
+const SOCIAL_LINKS = [
+  { key: 'InstagramURL', icon: 'mdi:instagram', label: 'Instagram' },
+  { key: 'FacebookURL',  icon: 'mdi:facebook',  label: 'Facebook' },
+  { key: 'LinkedinURL',  icon: 'mdi:linkedin',  label: 'LinkedIn' },
+  { key: 'XURL',         icon: 'mdi:twitter',   label: 'X' },
+  { key: 'TiktokURL',    icon: 'mdi:tiktok',    label: 'TikTok' },
+  { key: 'YoutubeURL',   icon: 'mdi:youtube',   label: 'YouTube' },
+  { key: 'PinterestURL', icon: 'mdi:pinterest', label: 'Pinterest' },
+  { key: 'WhatsappURL',  icon: 'mdi:whatsapp',  label: 'WhatsApp' },
+  { key: 'TelegramURL',  icon: 'mdi:telegram',  label: 'Telegram' },
+]
+
 function LogoBrand({ cfg }) {
   const nome = cfg?.NomeImobiliaria || 'Imóveis'
   const logoPath = cfg?.LogoPath
@@ -38,6 +50,7 @@ export default function Header({ cfg }) {
   const wa = cfg?.Whatsapp
   const tel = cfg?.Telefone
   const waURL = getWAGenericURL(cfg)
+  const socialLinks = SOCIAL_LINKS.filter(s => cfg?.[s.key])
 
   return (
     <nav className="fixed top-0 left-0 w-full h-16 sm:h-20 bg-white z-50 border-b border-gray-100 px-4 sm:px-8 lg:px-16 flex items-center justify-between">
@@ -104,6 +117,22 @@ export default function Header({ cfg }) {
             </a>
           )}
           {!waURL && tel && <a href={`tel:${tel}`} className="text-sm text-gray-600">{tel}</a>}
+          {socialLinks.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {socialLinks.map(s => (
+                <a
+                  key={s.key}
+                  href={cfg[s.key]}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={s.label}
+                  className="inline-flex w-9 h-9 rounded-full border border-gray-200 items-center justify-center text-gray-400 hover:border-[var(--color-brand)] hover:text-[var(--color-brand)] transition-all"
+                >
+                  <iconify-icon icon={s.icon} className="text-base"></iconify-icon>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </nav>

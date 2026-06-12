@@ -1,5 +1,17 @@
 import { getWAGenericURL } from '../utils'
 
+const SOCIAL_LINKS = [
+  { key: 'InstagramURL', icon: 'mdi:instagram', label: 'Instagram' },
+  { key: 'FacebookURL',  icon: 'mdi:facebook',  label: 'Facebook' },
+  { key: 'LinkedinURL',  icon: 'mdi:linkedin',  label: 'LinkedIn' },
+  { key: 'XURL',         icon: 'mdi:twitter',   label: 'X' },
+  { key: 'TiktokURL',    icon: 'mdi:tiktok',    label: 'TikTok' },
+  { key: 'YoutubeURL',   icon: 'mdi:youtube',   label: 'YouTube' },
+  { key: 'PinterestURL', icon: 'mdi:pinterest', label: 'Pinterest' },
+  { key: 'WhatsappURL',  icon: 'mdi:whatsapp',  label: 'WhatsApp' },
+  { key: 'TelegramURL',  icon: 'mdi:telegram',  label: 'Telegram' },
+]
+
 export default function Footer({ cfg }) {
   const name = cfg?.NomeImobiliaria || 'Imóveis'
   const logoPath = cfg?.LogoPath
@@ -7,10 +19,11 @@ export default function Footer({ cfg }) {
   const telefone = cfg?.Telefone
   const email = cfg?.Email
   const endereco = cfg?.Endereco
-  const instagramURL = cfg?.InstagramURL
   const waURL = getWAGenericURL(cfg)
 
   const hasContact = telefone || waURL || email || endereco
+
+  const socialLinks = SOCIAL_LINKS.filter(s => cfg?.[s.key])
 
   return (
     <footer className="text-white pt-12 pb-8 px-8 lg:px-16" style={{ backgroundColor: 'var(--color-secondary)' }}>
@@ -41,16 +54,21 @@ export default function Footer({ cfg }) {
               <p className="text-sm text-gray-400 leading-relaxed mb-5">{descricao}</p>
             )}
 
-            {instagramURL && (
-              <a
-                href={instagramURL}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Instagram"
-                className="inline-flex w-9 h-9 rounded-full border border-white/10 items-center justify-center text-gray-400 hover:border-white/40 hover:text-white transition-all"
-              >
-                <iconify-icon icon="lucide:instagram" className="text-base"></iconify-icon>
-              </a>
+            {socialLinks.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {socialLinks.map(s => (
+                  <a
+                    key={s.key}
+                    href={cfg[s.key]}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={s.label}
+                    className="inline-flex w-9 h-9 rounded-full border border-white/10 items-center justify-center text-gray-400 hover:border-white/40 hover:text-white transition-all"
+                  >
+                    <iconify-icon icon={s.icon} className="text-base"></iconify-icon>
+                  </a>
+                ))}
+              </div>
             )}
           </div>
 

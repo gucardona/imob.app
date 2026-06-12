@@ -10,7 +10,9 @@ const DEFAULTS = {
 const EMPTY = {
   nome_imobiliaria: '', cor_primaria: '', cor_secundaria: '',
   endereco: '', telefone: '', whatsapp: '', email: '',
-  instagram_url: '', texto_sobre: '', hero_image_url: '',
+  instagram_url: '', facebook_url: '', linkedin_url: '', x_url: '',
+  tiktok_url: '', youtube_url: '', pinterest_url: '', whatsapp_url: '', telegram_url: '',
+  texto_sobre: '', hero_image_url: '',
   hero_titulo: '', hero_subtitulo: '', cta_texto: '', cta_link: '',
   msg_whatsapp_padrao: '', msg_whatsapp_imovel: '',
   hero_mode: 'image',
@@ -47,6 +49,14 @@ export default function Configuracao() {
           whatsapp: cfg.Whatsapp ?? '',
           email: cfg.Email ?? '',
           instagram_url: cfg.InstagramURL ?? '',
+          facebook_url: cfg.FacebookURL ?? '',
+          linkedin_url: cfg.LinkedinURL ?? '',
+          x_url: cfg.XURL ?? '',
+          tiktok_url: cfg.TiktokURL ?? '',
+          youtube_url: cfg.YoutubeURL ?? '',
+          pinterest_url: cfg.PinterestURL ?? '',
+          whatsapp_url: cfg.WhatsappURL ?? '',
+          telegram_url: cfg.TelegramURL ?? '',
           texto_sobre: cfg.TextoSobre ?? '',
           hero_image_url: cfg.HeroImageURL ?? '',
           hero_titulo: cfg.HeroTitulo ?? '',
@@ -354,9 +364,22 @@ export default function Configuracao() {
             <Field label="E-mail">
               <input type="email" value={fields.email} onChange={e => set('email', e.target.value)} className={inp} placeholder="contato@imobiliaria.com" />
             </Field>
-            <Field label="Instagram URL">
-              <input value={fields.instagram_url} onChange={e => set('instagram_url', e.target.value)} className={inp} placeholder="https://instagram.com/..." />
-            </Field>
+          </div>
+        </Section>
+
+        {/* Redes Sociais */}
+        <Section title="Redes Sociais">
+          <p className="text-xs text-gray-400 -mt-1">Preencha apenas as redes que sua imobiliária utiliza. Links em branco ficam ocultos no site.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SocialField label="Instagram" icon="mdi:instagram" field="instagram_url" placeholder="https://instagram.com/suaimobiliaria" fields={fields} set={set} />
+            <SocialField label="Facebook" icon="mdi:facebook" field="facebook_url" placeholder="https://facebook.com/suaimobiliaria" fields={fields} set={set} />
+            <SocialField label="LinkedIn" icon="mdi:linkedin" field="linkedin_url" placeholder="https://linkedin.com/company/suaimobiliaria" fields={fields} set={set} />
+            <SocialField label="X (Twitter)" icon="mdi:twitter" field="x_url" placeholder="https://x.com/suaimobiliaria" fields={fields} set={set} />
+            <SocialField label="TikTok" icon="mdi:tiktok" field="tiktok_url" placeholder="https://tiktok.com/@suaimobiliaria" fields={fields} set={set} />
+            <SocialField label="YouTube" icon="mdi:youtube" field="youtube_url" placeholder="https://youtube.com/@suaimobiliaria" fields={fields} set={set} />
+            <SocialField label="Pinterest" icon="mdi:pinterest" field="pinterest_url" placeholder="https://pinterest.com/suaimobiliaria" fields={fields} set={set} />
+            <SocialField label="WhatsApp" icon="mdi:whatsapp" field="whatsapp_url" placeholder="https://wa.me/5551999999999" fields={fields} set={set} />
+            <SocialField label="Telegram" icon="mdi:telegram" field="telegram_url" placeholder="https://t.me/suaimobiliaria" fields={fields} set={set} />
           </div>
         </Section>
 
@@ -687,6 +710,25 @@ function SkCard({ children }) {
     <div className="bg-white rounded-2xl border border-gray-100 p-6 custom-shadow space-y-5">
       {children}
     </div>
+  )
+}
+
+function SocialField({ label, icon, field, placeholder, fields, set }) {
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-2">
+        <div className="w-10 h-11 flex-shrink-0 flex items-center justify-center border border-gray-200 rounded-xl bg-gray-50">
+          <iconify-icon icon={icon} class="text-gray-400 text-lg"></iconify-icon>
+        </div>
+        <input
+          value={fields[field]}
+          onChange={e => set(field, e.target.value)}
+          className={`${inp} flex-1`}
+          placeholder={placeholder}
+          type="url"
+        />
+      </div>
+    </Field>
   )
 }
 

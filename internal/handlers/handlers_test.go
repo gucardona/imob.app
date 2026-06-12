@@ -761,6 +761,44 @@ func TestRouter_PublicImoveis_FilterByQ(t *testing.T) {
 	}
 }
 
+func TestRouter_AdminConfiguracao_SocialMediaRoundtrip(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	_ = writer.WriteField("instagram_url", "https://instagram.com/test")
+	_ = writer.WriteField("facebook_url", "https://facebook.com/test")
+	_ = writer.WriteField("youtube_url", "https://youtube.com/@test")
+	_ = writer.WriteField("telegram_url", "https://t.me/test")
+	writer.Close()
+
+	putRec := authedReq(t, router, cookies, http.MethodPut, "/api/admin/configuracao", &buf, writer.FormDataContentType())
+	if putRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", putRec.Code, putRec.Body.String())
+	}
+	body := putRec.Body.String()
+	if !strings.Contains(body, "instagram.com/test") {
+		t.Errorf("InstagramURL missing in response: %s", body)
+	}
+	if !strings.Contains(body, "youtube.com/@test") {
+		t.Errorf("YoutubeURL missing in response: %s", body)
+	}
+}
+
+func TestRouter_AdminConfiguracao_InvalidSocialURL_Returns400(t *testing.T) {
+	router, cookies, _ := setupAdminRouter(t)
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	_ = writer.WriteField("instagram_url", "not-a-url")
+	writer.Close()
+
+	rec := authedReq(t, router, cookies, http.MethodPut, "/api/admin/configuracao", &buf, writer.FormDataContentType())
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid URL, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func uploadSampleFoto(t *testing.T, router http.Handler, cookies []*http.Cookie, imovelID int64) *httptest.ResponseRecorder {
 	t.Helper()
 

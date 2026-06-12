@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -385,6 +386,17 @@ func (h adminAPIHandlers) configUpdate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	socialFields := []string{
+		"instagram_url", "facebook_url", "linkedin_url", "x_url",
+		"tiktok_url", "youtube_url", "pinterest_url", "whatsapp_url", "telegram_url",
+	}
+	for _, field := range socialFields {
+		if v := r.FormValue(field); v != "" && !isValidURL(v) {
+			writeJSONError(w, "URL inválida: "+field, http.StatusBadRequest)
+			return
+		}
+	}
+
 	cfg := repo.Configuracao{
 		NomeImobiliaria:   r.FormValue("nome_imobiliaria"),
 		CorPrimaria:       r.FormValue("cor_primaria"),
@@ -394,6 +406,14 @@ func (h adminAPIHandlers) configUpdate(w http.ResponseWriter, r *http.Request) {
 		Whatsapp:          r.FormValue("whatsapp"),
 		Email:             r.FormValue("email"),
 		InstagramURL:      r.FormValue("instagram_url"),
+		FacebookURL:       r.FormValue("facebook_url"),
+		LinkedinURL:       r.FormValue("linkedin_url"),
+		XURL:              r.FormValue("x_url"),
+		TiktokURL:         r.FormValue("tiktok_url"),
+		YoutubeURL:        r.FormValue("youtube_url"),
+		PinterestURL:      r.FormValue("pinterest_url"),
+		WhatsappURL:       r.FormValue("whatsapp_url"),
+		TelegramURL:       r.FormValue("telegram_url"),
 		TextoSobre:        r.FormValue("texto_sobre"),
 		HeroImageURL:      r.FormValue("hero_image_url"),
 		HeroTitulo:        r.FormValue("hero_titulo"),
@@ -524,6 +544,14 @@ func (h adminAPIHandlers) configRemoveHeroImage(w http.ResponseWriter, r *http.R
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+func isValidURL(s string) bool {
+	u, err := url.ParseRequestURI(s)
+	if err != nil {
+		return false
+	}
+	return u.Scheme == "http" || u.Scheme == "https"
+}
 
 func parseIDPathValue(r *http.Request, name string) (int64, error) {
 	return strconv.ParseInt(r.PathValue(name), 10, 64)
