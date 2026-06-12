@@ -24,7 +24,7 @@ function Skeleton() {
 export default function Home({ cfg }) {
   const [imoveis, setImoveis] = useState([])
   const [loading, setLoading] = useState(true)
-  const [cidade, setCidade] = useState('')
+  const [q, setQ] = useState('')
   const [tipo, setTipo] = useState('')
   const [finalidade, setFinalidade] = useState('')
   const navigate = useNavigate()
@@ -50,7 +50,7 @@ export default function Home({ cfg }) {
   function handleSearch(e) {
     e.preventDefault()
     const params = new URLSearchParams()
-    if (cidade.trim()) params.set('cidade', cidade.trim())
+    if (q.trim()) params.set('q', q.trim())
     if (tipo) params.set('tipo', tipo)
     if (finalidade) params.set('finalidade', finalidade)
     navigate(`/imoveis?${params}`)
@@ -135,12 +135,12 @@ export default function Home({ cfg }) {
           >
             <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
               <div className="px-6 py-2">
-                <label className="block text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Localização</label>
+                <label className="block text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-1">Busca</label>
                 <input
                   type="text"
-                  placeholder="Cidade ou bairro"
-                  value={cidade}
-                  onChange={e => setCidade(e.target.value)}
+                  placeholder="Cidade, bairro, tipo, descrição…"
+                  value={q}
+                  onChange={e => setQ(e.target.value)}
                   className="w-full text-sm font-medium focus:outline-none placeholder-gray-300"
                 />
               </div>
