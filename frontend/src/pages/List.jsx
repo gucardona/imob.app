@@ -23,18 +23,18 @@ export default function List({ cfg }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [imoveis, setImoveis] = useState([])
   const [loading, setLoading] = useState(true)
-  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '')
+  const qParam = searchParams.get('q') || ''
+  const [searchInput, setSearchInput] = useState(qParam)
 
   const filters = {
     finalidade: searchParams.get('finalidade') || '',
     tipo: searchParams.get('tipo') || '',
-    cidade: searchParams.get('cidade') || '',
-    q: searchParams.get('q') || '',
+    q: qParam,
   }
 
   useEffect(() => {
-    setSearchInput(searchParams.get('q') || '')
-  }, [searchParams.get('q')])
+    setSearchInput(qParam)
+  }, [qParam])
 
   useEffect(() => {
     setLoading(true)
@@ -80,7 +80,7 @@ export default function List({ cfg }) {
           <form onSubmit={handleSearch} className="flex gap-3">
             <input
               type="text"
-              placeholder="Buscar por nome, cidade, bairro..."
+              placeholder="Cidade, bairro, tipo, descrição…"
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               className="border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gray-400 w-72 placeholder-gray-300"
