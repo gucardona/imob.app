@@ -200,12 +200,12 @@ async function prepareMediaFile(file) {
 
 async function compressImage(file) {
   const img = await loadImage(file)
-  const maxEdge = 1280
+  const maxEdge = 1920
   const scale = Math.min(maxEdge / img.naturalWidth, maxEdge / img.naturalHeight, 1)
   const width = Math.max(1, Math.round(img.naturalWidth * scale))
   const height = Math.max(1, Math.round(img.naturalHeight * scale))
 
-  if (scale === 1 && file.size <= 2 * 1024 * 1024 && file.type === 'image/jpeg') {
+  if (scale === 1 && file.size <= 4 * 1024 * 1024 && (file.type === 'image/jpeg' || file.type === 'image/webp')) {
     return file
   }
 
@@ -213,9 +213,12 @@ async function compressImage(file) {
   canvas.width = width
   canvas.height = height
   const ctx = canvas.getContext('2d')
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(img, 0, 0, width, height)
+
   const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao comprimir imagem.')), 'image/jpeg', 0.72)
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao comprimir imagem.')), 'image/jpeg', 0.88)
   })
   const name = file.name.replace(/\.[^.]+$/, '') || 'imagem'
   return new File([blob], `${name}.jpg`, { type: 'image/jpeg', lastModified: Date.now() })
