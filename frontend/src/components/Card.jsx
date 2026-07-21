@@ -4,6 +4,7 @@ import { formatPrice } from '../utils'
 export default function Card({ imovel }) {
   const price = formatPrice(imovel.Preco, imovel.Finalidade)
   const label = imovel.Finalidade === 'aluguel' ? 'Aluguel' : 'Disponível'
+  const area = imovel.AreaTotalM2 || imovel.AreaM2 || 0
 
   return (
     <Link to={`/imoveis/${imovel.Slug}`} className="property-card group cursor-pointer block">
@@ -48,10 +49,10 @@ export default function Card({ imovel }) {
               <span className="text-xs font-semibold">{imovel.Banheiros} {imovel.Banheiros === 1 ? 'Banho' : 'Banhos'}</span>
             </div>
           )}
-          {imovel.AreaM2 > 0 && (
+          {area > 0 && (
             <div className="flex items-center gap-2 text-gray-500">
               <iconify-icon icon="lucide:maximize" className="text-lg"></iconify-icon>
-              <span className="text-xs font-semibold">{imovel.AreaM2} m²</span>
+              <span className="text-xs font-semibold">{area} m²</span>
             </div>
           )}
         </div>

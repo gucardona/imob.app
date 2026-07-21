@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
-import { getImovel, createImovel, updateImovel, uploadFotos } from '../api.js'
+import { useNavigate, useParams, Link, useLocation } from 'react-router-dom'
+import { getImovel, createImovel, updateImovel, uploadMediaFiles } from '../api.js'
 import FotosGrid from '../components/FotosGrid.jsx'
 
 const EMPTY = {
   Titulo: '', Descricao: '', Tipo: 'casa', Finalidade: 'venda',
   Estado: '', Cidade: '', Bairro: '', Endereco: '', Numero: '',
-  Preco: 0, AreaM2: 0, Quartos: '', Banheiros: '', VagasGaragem: '',
+  Preco: 0, AreaM2: 0, AreaTotalM2: '', AreaConstruidaM2: '', AreaUtilM2: '',
+  FrenteM: '', LadoM: '', Quartos: '', Banheiros: '', VagasGaragem: '',
   Status: 'disponivel', Destaque: false,
 }
 
@@ -30,16 +31,25 @@ function Skeleton() {
 export default function ImovelForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const isEdit = Boolean(id)
 
   const [form, setForm] = useState(EMPTY)
   const [fotos, setFotos] = useState([])
-  const [pendingPhotos, setPendingPhotos] = useState([])
+  const [pendingMedia, setPendingMedia] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(null)
   const [error, setError] = useState('')
   const [cep, setCep] = useState('')
   const [cepStatus, setCepStatus] = useState('')
+
+  useEffect(() => {
+    if (location.state?.mediaUploadError) {
+      setError(location.state.mediaUploadError)
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.pathname, location.state, navigate])
 
   useEffect(() => {
     if (!isEdit) return
@@ -57,6 +67,11 @@ export default function ImovelForm() {
           Numero: Imovel.Numero ?? '',
           Preco: Imovel.Preco ?? '',
           AreaM2: Imovel.AreaM2 ?? '',
+          AreaTotalM2: Imovel.AreaTotalM2 || Imovel.AreaM2 || '',
+          AreaConstruidaM2: Imovel.AreaConstruidaM2 ?? '',
+          AreaUtilM2: Imovel.AreaUtilM2 ?? '',
+          FrenteM: Imovel.FrenteM ?? '',
+          LadoM: Imovel.LadoM ?? '',
           Quartos: Imovel.Quartos ?? '',
           Banheiros: Imovel.Banheiros ?? '',
           VagasGaragem: Imovel.VagasGaragem ?? '',
@@ -105,11 +120,17 @@ export default function ImovelForm() {
   async function handleSubmit(e) {
     e.preventDefault()
     setSaving(true)
+    setUploadProgress(null)
     setError('')
     const body = {
       ...form,
       Preco: parseFloat(form.Preco) || 0,
-      AreaM2: parseFloat(form.AreaM2) || 0,
+      AreaTotalM2: parseFloat(form.AreaTotalM2) || 0,
+      AreaConstruidaM2: form.Tipo === 'terreno' ? 0 : (parseFloat(form.AreaConstruidaM2) || 0),
+      AreaUtilM2: form.Tipo === 'terreno' ? 0 : (parseFloat(form.AreaUtilM2) || 0),
+      FrenteM: form.Tipo === 'apartamento' ? 0 : (parseFloat(form.FrenteM) || 0),
+      LadoM: form.Tipo === 'apartamento' ? 0 : (parseFloat(form.LadoM) || 0),
+      AreaM2: parseFloat(form.AreaTotalM2) || parseFloat(form.AreaM2) || 0,
       Quartos: parseInt(form.Quartos) || 0,
       Banheiros: parseInt(form.Banheiros) || 0,
       VagasGaragem: parseInt(form.VagasGaragem) || 0,
@@ -120,17 +141,22 @@ export default function ImovelForm() {
         navigate('/admin/imoveis')
       } else {
         const created = await createImovel(body)
-        if (pendingPhotos.length > 0) {
-          const fd = new FormData()
-          for (const f of pendingPhotos) fd.append('fotos', f)
-          await uploadFotos(created.ID, fd).catch(() => {})
+        if (pendingMedia.length > 0) {
+          const result = await uploadMediaFiles(created.ID, pendingMedia, setUploadProgress)
+          if (result.failed.length > 0) {
+            navigate(`/admin/imoveis/${created.ID}/editar`, {
+              state: { mediaUploadError: `${result.failed.length} mídia(s) falharam. Tente enviar novamente na edição.` },
+            })
+            return
+          }
         }
         navigate('/admin/imoveis')
       }
-    } catch {
-      setError('Erro ao salvar imóvel.')
+    } catch (err) {
+      setError(err?.message || 'Erro ao salvar imóvel.')
     } finally {
       setSaving(false)
+      setUploadProgress(null)
     }
   }
 
@@ -245,9 +271,29 @@ export default function ImovelForm() {
             <Field label="Preço (R$)">
               <CentavosInput value={form.Preco} onChange={v => set('Preco', v)} className={inp} />
             </Field>
-            <Field label="Área (m²)">
-              <CentavosInput value={form.AreaM2} onChange={v => set('AreaM2', v)} className={inp} />
+            <Field label="Área total (m²)">
+              <CentavosInput value={form.AreaTotalM2} onChange={v => set('AreaTotalM2', v)} className={inp} />
             </Field>
+            {form.Tipo !== 'terreno' && (
+              <>
+                <Field label="Área construída (m²)">
+                  <CentavosInput value={form.AreaConstruidaM2} onChange={v => set('AreaConstruidaM2', v)} className={inp} />
+                </Field>
+                <Field label="Área útil (m²)">
+                  <CentavosInput value={form.AreaUtilM2} onChange={v => set('AreaUtilM2', v)} className={inp} />
+                </Field>
+              </>
+            )}
+            {form.Tipo !== 'apartamento' && (
+              <>
+                <Field label="Frente do terreno (m)">
+                  <CentavosInput value={form.FrenteM} onChange={v => set('FrenteM', v)} className={inp} />
+                </Field>
+                <Field label="Lado do terreno (m)">
+                  <CentavosInput value={form.LadoM} onChange={v => set('LadoM', v)} className={inp} />
+                </Field>
+              </>
+            )}
             <Field label="Quartos">
               <input type="number" min="0" value={form.Quartos} onChange={e => set('Quartos', e.target.value)} className={inp} placeholder="0" />
             </Field>
@@ -280,17 +326,18 @@ export default function ImovelForm() {
           </label>
         </Section>
 
-        {/* Fotos */}
-        <Section title="Fotos">
+        {/* Mídias */}
+        <Section title="Mídias">
           {isEdit
             ? <FotosGrid imovelID={parseInt(id)} fotos={fotos} onChange={setFotos} />
-            : <PendingFotos files={pendingPhotos} onChange={setPendingPhotos} />
+            : <PendingFotos files={pendingMedia} onChange={setPendingMedia} />
           }
         </Section>
 
         {error && (
           <p className="text-sm text-red-500 font-medium">{error}</p>
         )}
+        {saving && uploadProgress && <UploadProgress value={uploadProgress} />}
 
         <div className="flex items-center gap-3 pb-10">
           <button
@@ -299,7 +346,7 @@ export default function ImovelForm() {
             className="bg-[var(--color-brand)] hover:bg-[var(--color-brand-dark)] text-white px-8 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
           >
             {saving
-              ? (pendingPhotos.length > 0 ? 'Salvando e enviando fotos…' : 'Salvando…')
+              ? (pendingMedia.length > 0 ? 'Salvando e enviando mídias…' : 'Salvando…')
               : 'Salvar'}
           </button>
           <button
@@ -337,11 +384,21 @@ function PendingFotos({ files, onChange }) {
     onChange(prev => prev.filter((_, i) => i !== idx))
   }
 
+  function moveFile(idx, direction) {
+    const target = idx + direction
+    onChange(prev => {
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[idx], next[target]] = [next[target], next[idx]]
+      return next
+    })
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-semibold text-gray-500">
-          {files.length} foto{files.length !== 1 ? 's' : ''} selecionada{files.length !== 1 ? 's' : ''}
+          {files.length} mídia{files.length !== 1 ? 's' : ''} selecionada{files.length !== 1 ? 's' : ''}
         </p>
         <button
           type="button"
@@ -349,9 +406,9 @@ function PendingFotos({ files, onChange }) {
           className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand)] hover:underline"
         >
           <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
-          Adicionar fotos
+          Adicionar mídias
         </button>
-        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleAdd} />
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple className="hidden" onChange={handleAdd} />
       </div>
 
       {files.length === 0 ? (
@@ -360,15 +417,35 @@ function PendingFotos({ files, onChange }) {
           onClick={() => fileRef.current?.click()}
           className="w-full border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center text-gray-400 hover:border-[var(--color-brand)] hover:text-[var(--color-brand)] transition-colors"
         >
-          <iconify-icon icon="lucide:image-plus" class="text-3xl mb-2 block mx-auto"></iconify-icon>
-          <span className="text-sm font-medium">Clique para adicionar fotos</span>
+          <iconify-icon icon="lucide:images" class="text-3xl mb-2 block mx-auto"></iconify-icon>
+          <span className="text-sm font-medium">Clique para adicionar mídias</span>
         </button>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {previews.map((url, idx) => (
             <div key={idx} className="relative group rounded-2xl overflow-hidden bg-gray-100 aspect-video">
-              <img src={url} alt="" className="w-full h-full object-cover" />
+              {files[idx].type.startsWith('video/') ? (
+                <video src={url} className="w-full h-full object-cover" muted playsInline />
+              ) : (
+                <img src={url} alt="" className="w-full h-full object-cover" />
+              )}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => moveFile(idx, -1)}
+                  disabled={idx === 0}
+                  className="absolute top-2 left-2 w-8 h-8 bg-white text-gray-700 rounded-lg flex items-center justify-center disabled:opacity-40"
+                >
+                  <iconify-icon icon="lucide:chevron-left" class="text-sm"></iconify-icon>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveFile(idx, 1)}
+                  disabled={idx === files.length - 1}
+                  className="absolute top-2 right-2 w-8 h-8 bg-white text-gray-700 rounded-lg flex items-center justify-center disabled:opacity-40"
+                >
+                  <iconify-icon icon="lucide:chevron-right" class="text-sm"></iconify-icon>
+                </button>
                 <button
                   type="button"
                   onClick={() => handleRemove(idx)}
@@ -381,6 +458,34 @@ function PendingFotos({ files, onChange }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function UploadProgress({ value }) {
+  const phaseLabels = {
+    preparing: 'Preparando',
+    uploading: 'Enviando',
+    processing: 'Processando',
+    done: 'Concluído',
+    failed: 'Falhou',
+  }
+  const percent = value.overallPercent ?? 0
+
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+      <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-gray-500">
+        <span className="truncate">
+          {phaseLabels[value.phase] || 'Enviando'} {value.fileIndex}/{value.totalFiles}: {value.fileName}
+        </span>
+        <span className="shrink-0 text-[var(--color-brand)]">{percent}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+        <div
+          className="h-full rounded-full bg-[var(--color-brand)] transition-all"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
     </div>
   )
 }

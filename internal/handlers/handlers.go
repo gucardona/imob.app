@@ -65,6 +65,7 @@ func NewRouter(deps Deps) http.Handler {
 
 	// Admin fotos
 	mux.Handle("POST /api/admin/imoveis/{id}/fotos", requireAuth(http.HandlerFunc(adminAPI.fotoUpload)))
+	mux.Handle("PUT /api/admin/imoveis/{id}/fotos/ordem", requireAuth(http.HandlerFunc(adminAPI.fotoReorder)))
 	mux.Handle("POST /api/admin/imoveis/{id}/fotos/{fotoID}/principal", requireAuth(http.HandlerFunc(adminAPI.fotoPrincipal)))
 	mux.Handle("DELETE /api/admin/imoveis/{id}/fotos/{fotoID}", requireAuth(http.HandlerFunc(adminAPI.fotoDelete)))
 

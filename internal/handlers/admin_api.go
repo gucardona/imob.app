@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/disintegration/imaging"
@@ -19,9 +22,12 @@ import (
 	"github.com/gucardona/imob.app/internal/repo"
 )
 
-const maxUploadBytes = 32 << 20   // 32 MiB — fotos de imóveis
-const maxLogoBytes = 2 << 20      // 2 MiB  — logo
-const maxHeroImageBytes = 5 << 20 // 5 MiB — hero image
+const maxUploadBytes = 110 << 20     // 110 MiB — mídias de imóveis
+const multipartMemoryBytes = 8 << 20 // 8 MiB — restante vai para arquivo temp
+const maxImageUploadBytes = 32 << 20 // 32 MiB — fotos de imóveis
+const maxVideoUploadBytes = 90 << 20 // 90 MiB — vídeos de imóveis
+const maxLogoBytes = 2 << 20         // 2 MiB  — logo
+const maxHeroImageBytes = 5 << 20    // 5 MiB — hero image
 
 // dummyHash equalises login timing for unknown-email attempts.
 var dummyHash, _ = auth.HashPassword("dummy-constant-timing")
@@ -99,22 +105,27 @@ func (h adminAPIHandlers) logout(w http.ResponseWriter, r *http.Request) {
 // ── Imóveis ───────────────────────────────────────────────────────────────────
 
 type imovelBody struct {
-	Titulo       string  `json:"Titulo"`
-	Descricao    string  `json:"Descricao"`
-	Tipo         string  `json:"Tipo"`
-	Finalidade   string  `json:"Finalidade"`
-	Estado       string  `json:"Estado"`
-	Cidade       string  `json:"Cidade"`
-	Bairro       string  `json:"Bairro"`
-	Endereco     string  `json:"Endereco"`
-	Numero       string  `json:"Numero"`
-	Preco        float64 `json:"Preco"`
-	AreaM2       float64 `json:"AreaM2"`
-	Quartos      int     `json:"Quartos"`
-	Banheiros    int     `json:"Banheiros"`
-	VagasGaragem int     `json:"VagasGaragem"`
-	Status       string  `json:"Status"`
-	Destaque     bool    `json:"Destaque"`
+	Titulo           string  `json:"Titulo"`
+	Descricao        string  `json:"Descricao"`
+	Tipo             string  `json:"Tipo"`
+	Finalidade       string  `json:"Finalidade"`
+	Estado           string  `json:"Estado"`
+	Cidade           string  `json:"Cidade"`
+	Bairro           string  `json:"Bairro"`
+	Endereco         string  `json:"Endereco"`
+	Numero           string  `json:"Numero"`
+	Preco            float64 `json:"Preco"`
+	AreaM2           float64 `json:"AreaM2"`
+	AreaTotalM2      float64 `json:"AreaTotalM2"`
+	AreaConstruidaM2 float64 `json:"AreaConstruidaM2"`
+	AreaUtilM2       float64 `json:"AreaUtilM2"`
+	FrenteM          float64 `json:"FrenteM"`
+	LadoM            float64 `json:"LadoM"`
+	Quartos          int     `json:"Quartos"`
+	Banheiros        int     `json:"Banheiros"`
+	VagasGaragem     int     `json:"VagasGaragem"`
+	Status           string  `json:"Status"`
+	Destaque         bool    `json:"Destaque"`
 }
 
 type adminImovelResp struct {
@@ -166,6 +177,8 @@ func (h adminAPIHandlers) imovelCreate(w http.ResponseWriter, r *http.Request) {
 		Titulo: body.Titulo, Descricao: body.Descricao, Tipo: body.Tipo,
 		Finalidade: body.Finalidade, Estado: body.Estado, Cidade: body.Cidade, Bairro: body.Bairro,
 		Endereco: body.Endereco, Numero: body.Numero, Preco: body.Preco, AreaM2: body.AreaM2,
+		AreaTotalM2: body.AreaTotalM2, AreaConstruidaM2: body.AreaConstruidaM2, AreaUtilM2: body.AreaUtilM2,
+		FrenteM: body.FrenteM, LadoM: body.LadoM,
 		Quartos: body.Quartos, Banheiros: body.Banheiros, VagasGaragem: body.VagasGaragem,
 		Status: body.Status, Destaque: body.Destaque,
 	}
@@ -196,6 +209,8 @@ func (h adminAPIHandlers) imovelUpdate(w http.ResponseWriter, r *http.Request) {
 		Titulo: body.Titulo, Descricao: body.Descricao, Tipo: body.Tipo,
 		Finalidade: body.Finalidade, Estado: body.Estado, Cidade: body.Cidade, Bairro: body.Bairro,
 		Endereco: body.Endereco, Numero: body.Numero, Preco: body.Preco, AreaM2: body.AreaM2,
+		AreaTotalM2: body.AreaTotalM2, AreaConstruidaM2: body.AreaConstruidaM2, AreaUtilM2: body.AreaUtilM2,
+		FrenteM: body.FrenteM, LadoM: body.LadoM,
 		Quartos: body.Quartos, Banheiros: body.Banheiros, VagasGaragem: body.VagasGaragem,
 		Status: body.Status, Destaque: body.Destaque,
 	}
@@ -246,6 +261,7 @@ func (h adminAPIHandlers) imovelToggleDestaque(w http.ResponseWriter, r *http.Re
 // ── Fotos ─────────────────────────────────────────────────────────────────────
 
 func (h adminAPIHandlers) fotoUpload(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
 	imovelID, err := parseIDPathValue(r, "id")
 	if err != nil {
 		writeJSONError(w, "not found", http.StatusNotFound)
@@ -255,11 +271,13 @@ func (h adminAPIHandlers) fotoUpload(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, "not found", http.StatusNotFound)
 		return
 	}
-	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
+	if err := r.ParseMultipartForm(multipartMemoryBytes); err != nil {
 		writeJSONError(w, "files too large", http.StatusBadRequest)
 		return
 	}
 	files := r.MultipartForm.File["fotos"]
+	files = append(files, r.MultipartForm.File["midias"]...)
 	existing, err := h.fotos.ListByImovel(r.Context(), imovelID)
 	if err != nil {
 		writeJSONError(w, "internal", http.StatusInternalServerError)
@@ -269,37 +287,71 @@ func (h adminAPIHandlers) fotoUpload(w http.ResponseWriter, r *http.Request) {
 	destDir := filepath.Join(h.uploadsDir, strconv.FormatInt(imovelID, 10))
 
 	for i, header := range files {
+		fileStarted := time.Now()
 		file, err := header.Open()
 		if err != nil {
+			log.Printf("media upload open failed imovel_id=%d file=%q size=%d err=%v", imovelID, header.Filename, header.Size, err)
 			writeJSONError(w, "bad file", http.StatusBadRequest)
 			return
 		}
-		data := make([]byte, header.Size)
-		_, err = io.ReadFull(file, data)
-		file.Close()
+		kind, mimeType, err := detectUploadedMedia(file, header.Filename, header.Header.Get("Content-Type"))
 		if err != nil {
-			writeJSONError(w, "bad file", http.StatusBadRequest)
+			file.Close()
+			log.Printf("media upload rejected imovel_id=%d file=%q size=%d err=%v", imovelID, header.Filename, header.Size, err)
+			writeJSONError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		baseName := fmt.Sprintf("foto-%d-%d", nextOrdem+i+1, time.Now().UnixNano())
-		paths, err := images.SaveVariants(data, destDir, baseName)
-		if err != nil {
-			writeJSONError(w, "bad image", http.StatusBadRequest)
+		if kind == "image" && header.Size > maxImageUploadBytes {
+			file.Close()
+			log.Printf("media upload rejected imovel_id=%d file=%q kind=image size=%d max=%d err=image too large", imovelID, header.Filename, header.Size, maxImageUploadBytes)
+			writeJSONError(w, "image too large", http.StatusBadRequest)
 			return
 		}
+		if kind == "video" && header.Size > maxVideoUploadBytes {
+			file.Close()
+			log.Printf("media upload rejected imovel_id=%d file=%q kind=video size=%d max=%d err=video too large", imovelID, header.Filename, header.Size, maxVideoUploadBytes)
+			writeJSONError(w, "video too large", http.StatusBadRequest)
+			return
+		}
+
+		baseName := fmt.Sprintf("midia-%d-%d", nextOrdem+i+1, time.Now().UnixNano())
 		relDir := strconv.FormatInt(imovelID, 10)
-		_, err = h.fotos.Create(r.Context(), repo.Foto{
-			ImovelID:        imovelID,
-			CaminhoOriginal: filepath.ToSlash(filepath.Join(relDir, paths.Original)),
-			CaminhoThumb:    filepath.ToSlash(filepath.Join(relDir, paths.Thumb)),
-			CaminhoGrande:   filepath.ToSlash(filepath.Join(relDir, paths.Grande)),
-			Ordem:           nextOrdem + i,
-		})
+		foto := repo.Foto{
+			ImovelID:  imovelID,
+			MediaType: kind,
+			MimeType:  mimeType,
+			Ordem:     nextOrdem + i,
+		}
+		if kind == "image" {
+			paths, err := images.SaveVariants(file, destDir, baseName)
+			file.Close()
+			if err != nil {
+				log.Printf("media upload image processing failed imovel_id=%d file=%q size=%d mime=%q err=%v", imovelID, header.Filename, header.Size, mimeType, err)
+				writeJSONError(w, "bad image", http.StatusBadRequest)
+				return
+			}
+			foto.CaminhoOriginal = filepath.ToSlash(filepath.Join(relDir, paths.Original))
+			foto.CaminhoThumb = filepath.ToSlash(filepath.Join(relDir, paths.Thumb))
+			foto.CaminhoGrande = filepath.ToSlash(filepath.Join(relDir, paths.Grande))
+		} else {
+			videoPath, err := saveVideo(file, destDir, baseName, header.Filename, mimeType)
+			file.Close()
+			if err != nil {
+				log.Printf("media upload video save failed imovel_id=%d file=%q size=%d mime=%q err=%v", imovelID, header.Filename, header.Size, mimeType, err)
+				writeJSONError(w, "bad video", http.StatusBadRequest)
+				return
+			}
+			foto.CaminhoOriginal = filepath.ToSlash(filepath.Join(relDir, videoPath))
+		}
+		_, err = h.fotos.Create(r.Context(), foto)
 		if err != nil {
+			log.Printf("media upload db insert failed imovel_id=%d file=%q kind=%s size=%d mime=%q err=%v", imovelID, header.Filename, kind, header.Size, mimeType, err)
 			writeJSONError(w, "internal", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("media upload ok imovel_id=%d file=%q kind=%s size=%d mime=%q duration=%s", imovelID, header.Filename, kind, header.Size, mimeType, time.Since(fileStarted))
 	}
+	log.Printf("media upload batch ok imovel_id=%d files=%d duration=%s", imovelID, len(files), time.Since(started))
 	h.writeFotosJSON(w, r, imovelID)
 }
 
@@ -315,6 +367,26 @@ func (h adminAPIHandlers) fotoPrincipal(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if err := h.fotos.SetPrincipal(r.Context(), imovelID, fotoID); err != nil {
+		writeJSONError(w, "internal", http.StatusInternalServerError)
+		return
+	}
+	h.writeFotosJSON(w, r, imovelID)
+}
+
+func (h adminAPIHandlers) fotoReorder(w http.ResponseWriter, r *http.Request) {
+	imovelID, err := parseIDPathValue(r, "id")
+	if err != nil {
+		writeJSONError(w, "not found", http.StatusNotFound)
+		return
+	}
+	var body struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSONError(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := h.fotos.Reorder(r.Context(), imovelID, body.IDs); err != nil {
 		writeJSONError(w, "internal", http.StatusInternalServerError)
 		return
 	}
@@ -342,6 +414,9 @@ func (h adminAPIHandlers) fotoDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, rel := range []string{foto.CaminhoOriginal, foto.CaminhoThumb, foto.CaminhoGrande} {
+		if rel == "" {
+			continue
+		}
 		_ = os.Remove(filepath.Join(h.uploadsDir, rel))
 	}
 	h.writeFotosJSON(w, r, imovelID)
@@ -546,6 +621,78 @@ func (h adminAPIHandlers) configRemoveHeroImage(w http.ResponseWriter, r *http.R
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+func detectUploadedMedia(file io.ReadSeeker, fileName, declaredType string) (string, string, error) {
+	var sniff [512]byte
+	n, err := file.Read(sniff[:])
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", "", fmt.Errorf("bad file")
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return "", "", fmt.Errorf("bad file")
+	}
+
+	detected := http.DetectContentType(sniff[:n])
+	if strings.HasPrefix(detected, "image/") {
+		return "image", detected, nil
+	}
+
+	if mediaType, _, err := mime.ParseMediaType(declaredType); err == nil && isAllowedVideoType(mediaType) {
+		return "video", mediaType, nil
+	}
+	if mediaType := mime.TypeByExtension(strings.ToLower(filepath.Ext(fileName))); isAllowedVideoType(mediaType) {
+		return "video", mediaType, nil
+	}
+
+	return "", "", fmt.Errorf("unsupported media type")
+}
+
+func isAllowedVideoType(contentType string) bool {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err == nil {
+		contentType = mediaType
+	}
+	switch contentType {
+	case "video/mp4", "video/webm", "video/quicktime":
+		return true
+	default:
+		return false
+	}
+}
+
+func saveVideo(file io.Reader, destDir, baseName, originalName, mimeType string) (string, error) {
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		return "", err
+	}
+	ext := strings.ToLower(filepath.Ext(originalName))
+	switch mimeType {
+	case "video/mp4":
+		ext = ".mp4"
+	case "video/webm":
+		ext = ".webm"
+	case "video/quicktime":
+		if ext != ".mov" {
+			ext = ".mov"
+		}
+	}
+	if ext == "" {
+		ext = ".mp4"
+	}
+	fileName := baseName + ext
+	dest := filepath.Join(destDir, fileName)
+
+	out, err := os.OpenFile(dest, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, file); err != nil {
+		_ = os.Remove(dest)
+		return "", err
+	}
+	return fileName, nil
+}
 
 func isValidURL(s string) bool {
 	u, err := url.ParseRequestURI(s)

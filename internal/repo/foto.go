@@ -9,6 +9,8 @@ import (
 type Foto struct {
 	ID              int64  `json:"ID"`
 	ImovelID        int64  `json:"ImovelID"`
+	MediaType       string `json:"MediaType"`
+	MimeType        string `json:"MimeType"`
 	CaminhoOriginal string `json:"CaminhoOriginal"`
 	CaminhoThumb    string `json:"CaminhoThumb"`
 	CaminhoGrande   string `json:"CaminhoGrande"`
@@ -26,7 +28,7 @@ func NewFotoRepo(conn *sql.DB) FotoRepo {
 
 func (r FotoRepo) ListByImovel(ctx context.Context, imovelID int64) ([]Foto, error) {
 	rows, err := r.conn.QueryContext(ctx, `
-		SELECT id, imovel_id, caminho_original, caminho_thumb, caminho_grande, principal, ordem
+		SELECT id, imovel_id, media_type, mime_type, caminho_original, caminho_thumb, caminho_grande, principal, ordem
 		FROM fotos
 		WHERE imovel_id = ?
 		ORDER BY ordem ASC
@@ -39,7 +41,7 @@ func (r FotoRepo) ListByImovel(ctx context.Context, imovelID int64) ([]Foto, err
 	var list []Foto
 	for rows.Next() {
 		var f Foto
-		if err := rows.Scan(&f.ID, &f.ImovelID, &f.CaminhoOriginal, &f.CaminhoThumb, &f.CaminhoGrande, &f.Principal, &f.Ordem); err != nil {
+		if err := rows.Scan(&f.ID, &f.ImovelID, &f.MediaType, &f.MimeType, &f.CaminhoOriginal, &f.CaminhoThumb, &f.CaminhoGrande, &f.Principal, &f.Ordem); err != nil {
 			return nil, err
 		}
 		list = append(list, f)
@@ -48,10 +50,13 @@ func (r FotoRepo) ListByImovel(ctx context.Context, imovelID int64) ([]Foto, err
 }
 
 func (r FotoRepo) Create(ctx context.Context, foto Foto) (int64, error) {
+	if foto.MediaType == "" {
+		foto.MediaType = "image"
+	}
 	result, err := r.conn.ExecContext(ctx, `
-		INSERT INTO fotos (imovel_id, caminho_original, caminho_thumb, caminho_grande, principal, ordem)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, foto.ImovelID, foto.CaminhoOriginal, foto.CaminhoThumb, foto.CaminhoGrande, foto.Principal, foto.Ordem)
+		INSERT INTO fotos (imovel_id, media_type, mime_type, caminho_original, caminho_thumb, caminho_grande, principal, ordem)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, foto.ImovelID, foto.MediaType, foto.MimeType, foto.CaminhoOriginal, foto.CaminhoThumb, foto.CaminhoGrande, foto.Principal, foto.Ordem)
 	if err != nil {
 		return 0, err
 	}
@@ -80,9 +85,9 @@ func (r FotoRepo) SetPrincipal(ctx context.Context, imovelID, fotoID int64) erro
 func (r FotoRepo) GetByID(ctx context.Context, imovelID, fotoID int64) (Foto, error) {
 	var f Foto
 	err := r.conn.QueryRowContext(ctx,
-		`SELECT id, imovel_id, caminho_original, caminho_thumb, caminho_grande, principal, ordem FROM fotos WHERE id = ? AND imovel_id = ?`,
+		`SELECT id, imovel_id, media_type, mime_type, caminho_original, caminho_thumb, caminho_grande, principal, ordem FROM fotos WHERE id = ? AND imovel_id = ?`,
 		fotoID, imovelID,
-	).Scan(&f.ID, &f.ImovelID, &f.CaminhoOriginal, &f.CaminhoThumb, &f.CaminhoGrande, &f.Principal, &f.Ordem)
+	).Scan(&f.ID, &f.ImovelID, &f.MediaType, &f.MimeType, &f.CaminhoOriginal, &f.CaminhoThumb, &f.CaminhoGrande, &f.Principal, &f.Ordem)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Foto{}, ErrNotFound
 	}
@@ -94,13 +99,28 @@ func (r FotoRepo) Delete(ctx context.Context, imovelID, fotoID int64) error {
 	return err
 }
 
+func (r FotoRepo) Reorder(ctx context.Context, imovelID int64, ids []int64) error {
+	tx, err := r.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for ordem, id := range ids {
+		if _, err := tx.ExecContext(ctx, `UPDATE fotos SET ordem = ? WHERE id = ? AND imovel_id = ?`, ordem, id, imovelID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func (r FotoRepo) GetPrincipal(ctx context.Context, imovelID int64) (Foto, error) {
 	var f Foto
 	err := r.conn.QueryRowContext(ctx,
-		`SELECT id, imovel_id, caminho_original, caminho_thumb, caminho_grande, principal, ordem
+		`SELECT id, imovel_id, media_type, mime_type, caminho_original, caminho_thumb, caminho_grande, principal, ordem
 		 FROM fotos WHERE imovel_id = ? AND principal = 1 LIMIT 1`,
 		imovelID,
-	).Scan(&f.ID, &f.ImovelID, &f.CaminhoOriginal, &f.CaminhoThumb, &f.CaminhoGrande, &f.Principal, &f.Ordem)
+	).Scan(&f.ID, &f.ImovelID, &f.MediaType, &f.MimeType, &f.CaminhoOriginal, &f.CaminhoThumb, &f.CaminhoGrande, &f.Principal, &f.Ordem)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Foto{}, ErrNotFound
 	}

@@ -54,7 +54,7 @@ export function formatPrice(preco, finalidade) {
   if (valor === 0) {
     return 'Consulte';
   }
-  const formatted = valor.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  const formatted = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return finalidade === 'aluguel' ? `R$ ${formatted}/mês` : `R$ ${formatted}`
 }
 

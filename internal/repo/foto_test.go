@@ -95,6 +95,34 @@ func TestFotoRepo_SetPrincipal_EnsuresOnlyOnePerImovel(t *testing.T) {
 	}
 }
 
+func TestFotoRepo_Reorder_UpdatesOrdem(t *testing.T) {
+	conn := newTestDB(t)
+	ctx := context.Background()
+	imoveis := repo.NewImovelRepo(conn)
+	fotos := repo.NewFotoRepo(conn)
+
+	imovelID := createTestImovel(t, imoveis)
+	firstID, _ := fotos.Create(ctx, repo.Foto{ImovelID: imovelID, CaminhoOriginal: "a-original.jpg", CaminhoThumb: "a-thumb.jpg", CaminhoGrande: "a-grande.jpg", Ordem: 0})
+	secondID, _ := fotos.Create(ctx, repo.Foto{ImovelID: imovelID, CaminhoOriginal: "b-original.jpg", CaminhoThumb: "b-thumb.jpg", CaminhoGrande: "b-grande.jpg", Ordem: 1})
+	thirdID, _ := fotos.Create(ctx, repo.Foto{ImovelID: imovelID, CaminhoOriginal: "c-original.jpg", CaminhoThumb: "c-thumb.jpg", CaminhoGrande: "c-grande.jpg", Ordem: 2})
+
+	if err := fotos.Reorder(ctx, imovelID, []int64{thirdID, firstID, secondID}); err != nil {
+		t.Fatalf("Reorder returned error: %v", err)
+	}
+
+	list, err := fotos.ListByImovel(ctx, imovelID)
+	if err != nil {
+		t.Fatalf("ListByImovel returned error: %v", err)
+	}
+	got := []int64{list[0].ID, list[1].ID, list[2].ID}
+	want := []int64{thirdID, firstID, secondID}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("expected order %v, got %v", want, got)
+		}
+	}
+}
+
 func TestFotoRepo_Delete_RemovesFoto(t *testing.T) {
 	conn := newTestDB(t)
 	ctx := context.Background()

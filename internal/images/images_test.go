@@ -2,6 +2,8 @@ package images_test
 
 import (
 	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -49,7 +51,7 @@ func TestSaveVariants_WritesOriginalThumbAndGrande(t *testing.T) {
 	dir := t.TempDir()
 	data := sampleJPEG(t, 2000, 1000)
 
-	paths, err := images.SaveVariants(data, dir, "foto-1")
+	paths, err := images.SaveVariants(bytes.NewReader(data), dir, "foto-1")
 	if err != nil {
 		t.Fatalf("SaveVariants returned error: %v", err)
 	}
@@ -75,7 +77,7 @@ func TestSaveVariants_DoesNotUpscaleSmallerImages(t *testing.T) {
 	dir := t.TempDir()
 	data := sampleJPEG(t, 300, 200)
 
-	paths, err := images.SaveVariants(data, dir, "foto-pequena")
+	paths, err := images.SaveVariants(bytes.NewReader(data), dir, "foto-pequena")
 	if err != nil {
 		t.Fatalf("SaveVariants returned error: %v", err)
 	}
@@ -88,23 +90,69 @@ func TestSaveVariants_DoesNotUpscaleSmallerImages(t *testing.T) {
 
 func TestSaveVariants_OriginalPreservesSourceDimensions(t *testing.T) {
 	dir := t.TempDir()
-	data := sampleJPEG(t, 2000, 1333)
+	data := sampleJPEG(t, 1800, 1200)
 
-	paths, err := images.SaveVariants(data, dir, "full-res")
+	paths, err := images.SaveVariants(bytes.NewReader(data), dir, "full-res")
 	if err != nil {
 		t.Fatalf("SaveVariants returned error: %v", err)
 	}
 
 	w, h := decodeDimensions(t, filepath.Join(dir, filepath.Base(paths.Original)))
-	if w != 2000 || h != 1333 {
-		t.Errorf("expected original 2000x1333, got %dx%d", w, h)
+	if w != 1800 || h != 1200 {
+		t.Errorf("expected original 1800x1200, got %dx%d", w, h)
 	}
 }
 
 func TestSaveVariants_RejectsInvalidImageData(t *testing.T) {
 	dir := t.TempDir()
 
-	if _, err := images.SaveVariants([]byte("not an image"), dir, "bad"); err == nil {
+	if _, err := images.SaveVariants(bytes.NewReader([]byte("not an image")), dir, "bad"); err == nil {
 		t.Error("expected an error for invalid image data")
 	}
+}
+
+func TestSaveVariants_CapsOriginalWidth(t *testing.T) {
+	dir := t.TempDir()
+	data := sampleJPEG(t, 3000, 2000)
+
+	paths, err := images.SaveVariants(bytes.NewReader(data), dir, "large")
+	if err != nil {
+		t.Fatalf("SaveVariants returned error: %v", err)
+	}
+
+	w, _ := decodeDimensions(t, filepath.Join(dir, filepath.Base(paths.Original)))
+	if w != 1920 {
+		t.Errorf("expected original width capped at 1920, got %d", w)
+	}
+}
+
+func TestSaveVariants_RejectsHugePixelCountBeforeDecode(t *testing.T) {
+	dir := t.TempDir()
+	data := pngHeaderOnly(9000, 4000)
+
+	if _, err := images.SaveVariants(bytes.NewReader(data), dir, "huge"); err == nil {
+		t.Fatal("expected huge image dimensions to be rejected")
+	}
+}
+
+func pngHeaderOnly(width, height uint32) []byte {
+	var out bytes.Buffer
+	out.Write([]byte{137, 80, 78, 71, 13, 10, 26, 10})
+	var ihdr bytes.Buffer
+	_ = binary.Write(&ihdr, binary.BigEndian, width)
+	_ = binary.Write(&ihdr, binary.BigEndian, height)
+	ihdr.Write([]byte{8, 2, 0, 0, 0})
+	writePNGChunk(&out, "IHDR", ihdr.Bytes())
+	writePNGChunk(&out, "IEND", nil)
+	return out.Bytes()
+}
+
+func writePNGChunk(out *bytes.Buffer, typ string, data []byte) {
+	_ = binary.Write(out, binary.BigEndian, uint32(len(data)))
+	out.WriteString(typ)
+	out.Write(data)
+	crc := crc32.NewIEEE()
+	crc.Write([]byte(typ))
+	crc.Write(data)
+	_ = binary.Write(out, binary.BigEndian, crc.Sum32())
 }

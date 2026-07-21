@@ -13,6 +13,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -319,6 +320,59 @@ func TestRouter_AdminFotos_UploadPrincipalAndRemoveFlow(t *testing.T) {
 	list, _ = fotos.ListByImovel(context.Background(), imovelID)
 	if len(list) != 0 {
 		t.Errorf("expected 0 fotos after removal, got %d", len(list))
+	}
+}
+
+func TestRouter_AdminFotos_UploadVideo(t *testing.T) {
+	router, cookies, conn := setupAdminRouter(t)
+	imovelID, err := repo.NewImovelRepo(conn).Create(context.Background(), repo.Imovel{
+		Titulo: "Imóvel com Vídeo", Tipo: "casa", Finalidade: "venda",
+		Cidade: "Blumenau", Bairro: "Centro", Status: "disponivel", Preco: 500000,
+	})
+	if err != nil {
+		t.Fatalf("creating imóvel returned error: %v", err)
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	header := make(textproto.MIMEHeader)
+	header.Set("Content-Disposition", `form-data; name="midias"; filename="tour.mp4"`)
+	header.Set("Content-Type", "video/mp4")
+	part, err := writer.CreatePart(header)
+	if err != nil {
+		t.Fatalf("creating video part: %v", err)
+	}
+	if _, err := part.Write([]byte("\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom")); err != nil {
+		t.Fatalf("writing video part: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("closing multipart writer: %v", err)
+	}
+
+	rec := authedReq(t, router, cookies, http.MethodPost, fmt.Sprintf("/api/admin/imoveis/%d/fotos", imovelID), &body, writer.FormDataContentType())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected upload status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var fotosResp []repo.Foto
+	if err := json.NewDecoder(rec.Body).Decode(&fotosResp); err != nil {
+		t.Fatalf("decoding fotos response: %v", err)
+	}
+	if len(fotosResp) != 1 {
+		t.Fatalf("expected 1 media row, got %d", len(fotosResp))
+	}
+	if fotosResp[0].MediaType != "video" {
+		t.Fatalf("expected MediaType video, got %q", fotosResp[0].MediaType)
+	}
+	if fotosResp[0].MimeType != "video/mp4" {
+		t.Errorf("expected MimeType video/mp4, got %q", fotosResp[0].MimeType)
+	}
+
+	videoReq := httptest.NewRequest(http.MethodGet, "/uploads/"+fotosResp[0].CaminhoOriginal, nil)
+	videoRec := httptest.NewRecorder()
+	router.ServeHTTP(videoRec, videoReq)
+	if videoRec.Code != http.StatusOK {
+		t.Fatalf("expected uploaded video to be served, got %d", videoRec.Code)
 	}
 }
 

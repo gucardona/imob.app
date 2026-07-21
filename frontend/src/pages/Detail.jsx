@@ -14,6 +14,22 @@ function StatBox({ value, label }) {
   )
 }
 
+function mediaType(item) {
+  return item?.MediaType || item?.media_type || 'image'
+}
+
+function mediaPath(item, variant = 'grande') {
+  if (!item) return ''
+  if (mediaType(item) === 'video') return item.CaminhoOriginal || item.caminho_original || ''
+  if (variant === 'thumb') return item.CaminhoThumb || item.caminho_thumb || ''
+  return item.CaminhoGrande || item.caminho_grande || item.CaminhoOriginal || item.caminho_original || ''
+}
+
+function formatMeasure(value) {
+  const n = Number(value) || 0
+  return Number.isInteger(n) ? n.toString() : n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+}
+
 export default function Detail({ cfg }) {
   const { slug } = useParams()
   const [data, setData] = useState(null)
@@ -22,6 +38,7 @@ export default function Detail({ cfg }) {
   const [lightbox, setLightbox] = useState(false)
 
   useEffect(() => {
+    window.scrollTo(0, 0)
     setLoading(true)
     setActivePhoto(0)
     getImovel(slug).then(d => {
@@ -34,6 +51,7 @@ export default function Detail({ cfg }) {
   }, [slug])
 
   const fotos = data?.fotos ?? []
+  const activeMedia = fotos[activePhoto]
 
   const prev = useCallback(() => setActivePhoto(i => (i - 1 + fotos.length) % fotos.length), [fotos.length])
   const next = useCallback(() => setActivePhoto(i => (i + 1) % fotos.length), [fotos.length])
@@ -84,13 +102,16 @@ export default function Detail({ cfg }) {
   const { imovel } = data
   const email = cfg?.Email
   const price = formatPrice(imovel.Preco, imovel.Finalidade)
-  const pricePerM2 =
-    imovel.AreaM2 > 0 && imovel.Finalidade === 'venda'
-      ? `R$ ${Math.round(imovel.Preco / imovel.AreaM2).toLocaleString('pt-BR')}/m²`
-      : null
   const waURL = getWAImovelURL(cfg, imovel)
   const emailURL = getEmailImovelURL(cfg?.Email, cfg, imovel)
   const isAluguel = imovel.Finalidade === 'aluguel'
+  const isTerreno = imovel.Tipo === 'terreno'
+  const isApartamento = imovel.Tipo === 'apartamento'
+  const areaTotal = imovel.AreaTotalM2 || imovel.AreaM2 || 0
+
+  function scrollToGallery() {
+    document.getElementById('property-gallery')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -99,14 +120,24 @@ export default function Detail({ cfg }) {
       <main className="flex-1 pt-16 sm:pt-20">
         {/* GALLERY */}
         {fotos.length > 0 && (
-          <div className="bg-[#1A1A1A]">
+          <div id="property-gallery" className="bg-[#1A1A1A] scroll-mt-16 sm:scroll-mt-20">
             <div className="max-w-6xl mx-auto">
               <div className="relative h-[480px] overflow-hidden group cursor-zoom-in" onClick={() => setLightbox(true)}>
-                <img
-                  src={`/uploads/${fotos[activePhoto].CaminhoGrande}`}
-                  alt={imovel.Titulo}
-                  className="w-full h-full object-cover"
-                />
+                {mediaType(activeMedia) === 'video' ? (
+                  <video
+                    src={`/uploads/${mediaPath(activeMedia)}`}
+                    className="w-full h-full object-cover"
+                    controls
+                    playsInline
+                    onClick={e => e.stopPropagation()}
+                  />
+                ) : (
+                  <img
+                    src={`/uploads/${mediaPath(activeMedia)}`}
+                    alt={imovel.Titulo}
+                    className="w-full h-full object-cover"
+                  />
+                )}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="bg-black/40 rounded-full p-3">
                     <iconify-icon icon="lucide:expand" className="text-white text-2xl"></iconify-icon>
@@ -128,7 +159,16 @@ export default function Detail({ cfg }) {
                         i === activePhoto ? 'opacity-100 ring-2 ring-[var(--color-brand)] ring-offset-2 ring-offset-[#1A1A1A]' : 'opacity-40 hover:opacity-70'
                       }`}
                     >
-                      <img src={`/uploads/${f.CaminhoThumb}`} alt="" className="w-full h-full object-cover" />
+                      {mediaType(f) === 'video' ? (
+                        <div className="relative w-full h-full bg-black">
+                          <video src={`/uploads/${mediaPath(f)}`} className="w-full h-full object-cover" muted playsInline />
+                          <span className="absolute inset-0 flex items-center justify-center text-white">
+                            <iconify-icon icon="lucide:play" className="text-lg"></iconify-icon>
+                          </span>
+                        </div>
+                      ) : (
+                        <img src={`/uploads/${mediaPath(f, 'thumb')}`} alt="" className="w-full h-full object-cover" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -167,12 +207,23 @@ export default function Detail({ cfg }) {
               </>
             )}
 
-            <img
-              src={`/uploads/${fotos[activePhoto].CaminhoGrande}`}
-              alt={imovel.Titulo}
-              className="max-w-full max-h-full object-contain select-none"
-              onClick={e => e.stopPropagation()}
-            />
+            {mediaType(activeMedia) === 'video' ? (
+              <video
+                src={`/uploads/${mediaPath(activeMedia)}`}
+                className="max-w-full max-h-full object-contain"
+                controls
+                autoPlay
+                playsInline
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <img
+                src={`/uploads/${mediaPath(activeMedia)}`}
+                alt={imovel.Titulo}
+                className="max-w-full max-h-full object-contain select-none"
+                onClick={e => e.stopPropagation()}
+              />
+            )}
 
             {fotos.length > 1 && (
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm font-medium">
@@ -219,7 +270,11 @@ export default function Detail({ cfg }) {
               </p>
 
               <div className="flex flex-wrap gap-3 mb-12">
-                {imovel.AreaM2 > 0 && <StatBox value={`${imovel.AreaM2} m²`} label="Área" />}
+                {areaTotal > 0 && <StatBox value={`${formatMeasure(areaTotal)} m²`} label="Área total" />}
+                {!isTerreno && imovel.AreaConstruidaM2 > 0 && <StatBox value={`${formatMeasure(imovel.AreaConstruidaM2)} m²`} label="Construída" />}
+                {!isTerreno && imovel.AreaUtilM2 > 0 && <StatBox value={`${formatMeasure(imovel.AreaUtilM2)} m²`} label="Área útil" />}
+                {!isApartamento && imovel.FrenteM > 0 && <StatBox value={`${formatMeasure(imovel.FrenteM)} m`} label="Frente" />}
+                {!isApartamento && imovel.LadoM > 0 && <StatBox value={`${formatMeasure(imovel.LadoM)} m`} label="Lado" />}
                 {imovel.Quartos > 0 && <StatBox value={imovel.Quartos} label="Quartos" />}
                 {imovel.Banheiros > 0 && <StatBox value={imovel.Banheiros} label="Banheiros" />}
                 {imovel.VagasGaragem > 0 && <StatBox value={imovel.VagasGaragem} label="Vagas" />}
@@ -236,11 +291,19 @@ export default function Detail({ cfg }) {
             {/* Contact card */}
             <div>
               <div className="bg-white rounded-2xl p-8 border border-gray-100 sticky top-20 custom-shadow">
-                <p className="text-3xl font-bold tracking-tight text-[var(--color-brand)] mb-1">{price}</p>
-                {pricePerM2 && <p className="text-sm text-gray-400 mb-8">{pricePerM2}</p>}
-                {!pricePerM2 && <div className="mb-8" />}
+                <p className="text-3xl font-bold tracking-tight text-[var(--color-brand)] mb-8">{price}</p>
 
                 <div className="space-y-3 mb-6">
+                  {fotos.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={scrollToGallery}
+                      className="flex items-center justify-center gap-3 w-full border border-gray-200 text-gray-700 hover:bg-gray-50 py-4 rounded-xl font-medium transition-colors"
+                    >
+                      <iconify-icon icon="lucide:images" className="text-xl"></iconify-icon>
+                      Ver fotos e vídeos
+                    </button>
+                  )}
                   {waURL && (
                     <a
                       href={waURL}

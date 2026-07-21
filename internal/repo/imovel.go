@@ -9,29 +9,47 @@ import (
 )
 
 type Imovel struct {
-	ID           int64   `json:"ID"`
-	Slug         string  `json:"Slug"`
-	Titulo       string  `json:"Titulo"`
-	Descricao    string  `json:"Descricao"`
-	Tipo         string  `json:"Tipo"`
-	Finalidade   string  `json:"Finalidade"`
-	Estado       string  `json:"Estado"`
-	Cidade       string  `json:"Cidade"`
-	Bairro       string  `json:"Bairro"`
-	Endereco     string  `json:"Endereco"`
-	Numero       string  `json:"Numero"`
-	Preco        float64 `json:"Preco"`
-	AreaM2       float64 `json:"AreaM2"`
-	Quartos      int     `json:"Quartos"`
-	Banheiros    int     `json:"Banheiros"`
-	VagasGaragem int     `json:"VagasGaragem"`
-	Status       string  `json:"Status"`
-	Destaque     bool    `json:"Destaque"`
-	ThumbURL     string  `json:"ThumbURL"`
+	ID               int64   `json:"ID"`
+	Slug             string  `json:"Slug"`
+	Titulo           string  `json:"Titulo"`
+	Descricao        string  `json:"Descricao"`
+	Tipo             string  `json:"Tipo"`
+	Finalidade       string  `json:"Finalidade"`
+	Estado           string  `json:"Estado"`
+	Cidade           string  `json:"Cidade"`
+	Bairro           string  `json:"Bairro"`
+	Endereco         string  `json:"Endereco"`
+	Numero           string  `json:"Numero"`
+	Preco            float64 `json:"Preco"`
+	AreaM2           float64 `json:"AreaM2"`
+	AreaTotalM2      float64 `json:"AreaTotalM2"`
+	AreaConstruidaM2 float64 `json:"AreaConstruidaM2"`
+	AreaUtilM2       float64 `json:"AreaUtilM2"`
+	FrenteM          float64 `json:"FrenteM"`
+	LadoM            float64 `json:"LadoM"`
+	Quartos          int     `json:"Quartos"`
+	Banheiros        int     `json:"Banheiros"`
+	VagasGaragem     int     `json:"VagasGaragem"`
+	Status           string  `json:"Status"`
+	Destaque         bool    `json:"Destaque"`
+	ThumbURL         string  `json:"ThumbURL"`
 }
 
 type ImovelRepo struct {
 	conn *sql.DB
+}
+
+func (i Imovel) displayAreaM2() float64 {
+	if i.AreaTotalM2 > 0 {
+		return i.AreaTotalM2
+	}
+	if i.AreaConstruidaM2 > 0 {
+		return i.AreaConstruidaM2
+	}
+	if i.AreaUtilM2 > 0 {
+		return i.AreaUtilM2
+	}
+	return i.AreaM2
 }
 
 func NewImovelRepo(conn *sql.DB) ImovelRepo {
@@ -41,8 +59,9 @@ func NewImovelRepo(conn *sql.DB) ImovelRepo {
 func (r ImovelRepo) List(ctx context.Context) ([]Imovel, error) {
 	rows, err := r.conn.QueryContext(ctx, `
 		SELECT id, slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco, numero,
-		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
-		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
+		       preco, area_m2, area_total_m2, area_construida_m2, area_util_m2, frente_m, lado_m,
+		       quartos, banheiros, vagas_garagem, status, destaque,
+		       (SELECT COALESCE(NULLIF(caminho_grande, ''), NULLIF(caminho_thumb, '')) FROM fotos WHERE imovel_id = imoveis.id AND media_type = 'image' ORDER BY principal DESC, ordem ASC LIMIT 1)
 		FROM imoveis
 		ORDER BY criado_em DESC
 	`)
@@ -65,8 +84,9 @@ func (r ImovelRepo) List(ctx context.Context) ([]Imovel, error) {
 func (r ImovelRepo) Get(ctx context.Context, id int64) (Imovel, error) {
 	row := r.conn.QueryRowContext(ctx, `
 		SELECT id, slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco, numero,
-		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
-		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
+		       preco, area_m2, area_total_m2, area_construida_m2, area_util_m2, frente_m, lado_m,
+		       quartos, banheiros, vagas_garagem, status, destaque,
+		       (SELECT COALESCE(NULLIF(caminho_grande, ''), NULLIF(caminho_thumb, '')) FROM fotos WHERE imovel_id = imoveis.id AND media_type = 'image' ORDER BY principal DESC, ordem ASC LIMIT 1)
 		FROM imoveis
 		WHERE id = ?
 	`, id)
@@ -85,11 +105,13 @@ func (r ImovelRepo) Create(ctx context.Context, imovel Imovel) (int64, error) {
 	result, err := r.conn.ExecContext(ctx, `
 		INSERT INTO imoveis (
 			slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco, numero,
-			preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			preco, area_m2, area_total_m2, area_construida_m2, area_util_m2, frente_m, lado_m,
+			quartos, banheiros, vagas_garagem, status, destaque
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		Slugify(imovel.Titulo), imovel.Titulo, imovel.Descricao, imovel.Tipo, imovel.Finalidade,
-		imovel.Estado, imovel.Cidade, imovel.Bairro, imovel.Endereco, imovel.Numero, imovel.Preco, imovel.AreaM2,
+		imovel.Estado, imovel.Cidade, imovel.Bairro, imovel.Endereco, imovel.Numero, imovel.Preco,
+		imovel.displayAreaM2(), imovel.AreaTotalM2, imovel.AreaConstruidaM2, imovel.AreaUtilM2, imovel.FrenteM, imovel.LadoM,
 		imovel.Quartos, imovel.Banheiros, imovel.VagasGaragem, imovel.Status, imovel.Destaque,
 	)
 	if err != nil {
@@ -102,13 +124,15 @@ func (r ImovelRepo) Update(ctx context.Context, imovel Imovel) error {
 	_, err := r.conn.ExecContext(ctx, `
 		UPDATE imoveis SET
 			slug = ?, titulo = ?, descricao = ?, tipo = ?, finalidade = ?,
-			estado = ?, cidade = ?, bairro = ?, endereco = ?, numero = ?, preco = ?, area_m2 = ?,
+			estado = ?, cidade = ?, bairro = ?, endereco = ?, numero = ?, preco = ?,
+			area_m2 = ?, area_total_m2 = ?, area_construida_m2 = ?, area_util_m2 = ?, frente_m = ?, lado_m = ?,
 			quartos = ?, banheiros = ?, vagas_garagem = ?, status = ?, destaque = ?,
 			atualizado_em = datetime('now')
 		WHERE id = ?
 	`,
 		Slugify(imovel.Titulo), imovel.Titulo, imovel.Descricao, imovel.Tipo, imovel.Finalidade,
-		imovel.Estado, imovel.Cidade, imovel.Bairro, imovel.Endereco, imovel.Numero, imovel.Preco, imovel.AreaM2,
+		imovel.Estado, imovel.Cidade, imovel.Bairro, imovel.Endereco, imovel.Numero, imovel.Preco,
+		imovel.displayAreaM2(), imovel.AreaTotalM2, imovel.AreaConstruidaM2, imovel.AreaUtilM2, imovel.FrenteM, imovel.LadoM,
 		imovel.Quartos, imovel.Banheiros, imovel.VagasGaragem, imovel.Status, imovel.Destaque,
 		imovel.ID,
 	)
@@ -138,7 +162,8 @@ func scanImovel(row rowScanner) (Imovel, error) {
 
 	err := row.Scan(
 		&imovel.ID, &imovel.Slug, &imovel.Titulo, &imovel.Descricao, &imovel.Tipo, &imovel.Finalidade,
-		&imovel.Estado, &imovel.Cidade, &imovel.Bairro, &imovel.Endereco, &imovel.Numero, &imovel.Preco, &imovel.AreaM2,
+		&imovel.Estado, &imovel.Cidade, &imovel.Bairro, &imovel.Endereco, &imovel.Numero, &imovel.Preco,
+		&imovel.AreaM2, &imovel.AreaTotalM2, &imovel.AreaConstruidaM2, &imovel.AreaUtilM2, &imovel.FrenteM, &imovel.LadoM,
 		&imovel.Quartos, &imovel.Banheiros, &imovel.VagasGaragem, &imovel.Status, &imovel.Destaque,
 		&thumb,
 	)
@@ -161,8 +186,9 @@ type ImovelFilter struct {
 func (r ImovelRepo) GetBySlug(ctx context.Context, slug string) (Imovel, error) {
 	row := r.conn.QueryRowContext(ctx, `
 		SELECT id, slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco, numero,
-		       preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
-		       (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
+		       preco, area_m2, area_total_m2, area_construida_m2, area_util_m2, frente_m, lado_m,
+		       quartos, banheiros, vagas_garagem, status, destaque,
+		       (SELECT COALESCE(NULLIF(caminho_grande, ''), NULLIF(caminho_thumb, '')) FROM fotos WHERE imovel_id = imoveis.id AND media_type = 'image' ORDER BY principal DESC, ordem ASC LIMIT 1)
 		FROM imoveis
 		WHERE slug = ?
 	`, slug)
@@ -175,8 +201,9 @@ func (r ImovelRepo) GetBySlug(ctx context.Context, slug string) (Imovel, error) 
 
 func (r ImovelRepo) ListPublic(ctx context.Context, f ImovelFilter) ([]Imovel, error) {
 	q := `SELECT id, slug, titulo, descricao, tipo, finalidade, estado, cidade, bairro, endereco, numero,
-	             preco, area_m2, quartos, banheiros, vagas_garagem, status, destaque,
-	             (SELECT COALESCE(caminho_grande, caminho_thumb) FROM fotos WHERE imovel_id = imoveis.id ORDER BY principal DESC, ordem ASC LIMIT 1)
+	             preco, area_m2, area_total_m2, area_construida_m2, area_util_m2, frente_m, lado_m,
+	             quartos, banheiros, vagas_garagem, status, destaque,
+	             (SELECT COALESCE(NULLIF(caminho_grande, ''), NULLIF(caminho_thumb, '')) FROM fotos WHERE imovel_id = imoveis.id AND media_type = 'image' ORDER BY principal DESC, ordem ASC LIMIT 1)
 	      FROM imoveis
 	      WHERE status = 'disponivel'`
 	var args []any

@@ -9,3 +9,6 @@
 /internal/frontend/dist/*
 !/internal/frontend/dist/.gitkeep
 /frontend/node_modules/
+
+.claude
+.agents
